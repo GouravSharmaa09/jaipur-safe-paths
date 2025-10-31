@@ -4,7 +4,7 @@ export interface Place {
   type: string;
   lat: number;
   lng: number;
-  safetyLevel: "safe" | "caution" | "danger";
+  safetyLevel: "safe" | "caution" | "danger" | "avoid";
   tip: string;
   category: "cafe" | "shop" | "night" | "monument";
 }

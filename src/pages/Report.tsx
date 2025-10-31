@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MapPin, AlertTriangle } from "lucide-react";
+import { MapPin, AlertTriangle, Loader2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import SOSButton from "@/components/SOSButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,13 +9,75 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Report = () => {
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    placeName: "",
+    location: "",
+    lat: "",
+    lng: "",
+    safetyLevel: "safe" as "safe" | "caution" | "avoid",
+    experience: "",
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Thank you for your report!", {
-      description: "Our team will review it and update the map accordingly.",
-    });
+    setIsSubmitting(true);
+
+    try {
+      // Validate coordinates
+      const latitude = parseFloat(formData.lat);
+      const longitude = parseFloat(formData.lng);
+
+      if (isNaN(latitude) || isNaN(longitude)) {
+        toast.error("Invalid coordinates", {
+          description: "Please enter valid latitude and longitude values.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Check if user is authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Insert report
+      const { error } = await supabase
+        .from("reports")
+        .insert({
+          user_id: user?.id || null,
+          lat: latitude,
+          lng: longitude,
+          type: formData.safetyLevel,
+          place_name: formData.placeName,
+          description: formData.experience,
+        });
+
+      if (error) throw error;
+
+      toast.success("Thank you for your report!", {
+        description: "Your report has been submitted and will help others stay safe.",
+      });
+
+      // Reset form
+      setFormData({
+        placeName: "",
+        location: "",
+        lat: "",
+        lng: "",
+        safetyLevel: "safe",
+        experience: "",
+      });
+    } catch (error) {
+      console.error("Error submitting report:", error);
+      toast.error("Failed to submit report", {
+        description: "Please try again later.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -54,6 +116,8 @@ const Report = () => {
                   <Input
                     id="place-name"
                     placeholder="Enter the name of the location"
+                    value={formData.placeName}
+                    onChange={(e) => setFormData({ ...formData, placeName: e.target.value })}
                     required
                   />
                 </div>
@@ -63,13 +127,45 @@ const Report = () => {
                   <Input
                     id="location"
                     placeholder="Specific address or landmark"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                     required
                   />
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="latitude">Latitude</Label>
+                    <Input
+                      id="latitude"
+                      type="number"
+                      step="any"
+                      placeholder="26.9124"
+                      value={formData.lat}
+                      onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="longitude">Longitude</Label>
+                    <Input
+                      id="longitude"
+                      type="number"
+                      step="any"
+                      placeholder="75.7873"
+                      value={formData.lng}
+                      onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-3">
                   <Label>Safety Level</Label>
-                  <RadioGroup defaultValue="safe">
+                  <RadioGroup 
+                    value={formData.safetyLevel}
+                    onValueChange={(value) => setFormData({ ...formData, safetyLevel: value as "safe" | "caution" | "avoid" })}
+                  >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="safe" id="safe" />
                       <Label htmlFor="safe" className="font-normal cursor-pointer">
@@ -97,6 +193,8 @@ const Report = () => {
                     id="experience"
                     placeholder="Describe your experience and any safety tips..."
                     rows={5}
+                    value={formData.experience}
+                    onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
                     required
                   />
                 </div>
@@ -108,8 +206,15 @@ const Report = () => {
                   </p>
                 </div>
 
-                <Button type="submit" className="w-full" size="lg">
-                  Submit Report
+                <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    "Submit Report"
+                  )}
                 </Button>
               </form>
             </CardContent>

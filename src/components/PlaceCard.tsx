@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 interface PlaceCardProps {
   name: string;
   type: string;
-  safetyLevel: "safe" | "caution" | "danger";
+  safetyLevel: "safe" | "caution" | "danger" | "avoid";
   tip: string;
   onClose: () => void;
   onGetRoute?: () => void;
@@ -29,6 +29,11 @@ const PlaceCard = ({ name, type, safetyLevel, tip, onClose, onGetRoute }: PlaceC
       color: "bg-destructive text-destructive-foreground",
       icon: AlertTriangle,
       label: "Avoid at Night",
+    },
+    avoid: {
+      color: "bg-destructive text-destructive-foreground",
+      icon: AlertTriangle,
+      label: "Avoid",
     },
   };
 

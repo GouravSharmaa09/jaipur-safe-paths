@@ -4,6 +4,15 @@ import PlaceCard from "./PlaceCard";
 import RouteInfoCard from "./RouteInfoCard";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+interface LocationCluster {
+  id: string;
+  lat: number;
+  lng: number;
+  status: "safe" | "caution" | "avoid" | "unverified";
+  report_count: number;
+}
 
 interface MapComponentProps {
   selectedCategory: string;
@@ -28,6 +37,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   const directionsRendererRef = useRef<any>(null);
   const userMarkerRef = useRef<any>(null);
   const { toast } = useToast();
+  const [clusters, setClusters] = useState<LocationCluster[]>([]);
 
   useEffect(() => {
     // Load Google Maps script
@@ -73,6 +83,66 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
     setMap(mapInstance);
   }, [isLoaded]);
 
+  // Load clusters from Supabase
+  useEffect(() => {
+    const loadClusters = async () => {
+      const { data, error } = await supabase
+        .from("location_clusters")
+        .select("*");
+
+      if (error) {
+        console.error("Error loading clusters:", error);
+        return;
+      }
+
+      setClusters(data || []);
+    };
+
+    loadClusters();
+
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel("location_clusters_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "location_clusters",
+        },
+        (payload) => {
+          console.log("Cluster update received:", payload);
+          
+          if (payload.eventType === "INSERT") {
+            setClusters((prev) => [...prev, payload.new as LocationCluster]);
+            toast({
+              title: "Map updated",
+              description: "Multiple reports received for a location.",
+            });
+          } else if (payload.eventType === "UPDATE") {
+            setClusters((prev) =>
+              prev.map((cluster) =>
+                cluster.id === payload.new.id ? (payload.new as LocationCluster) : cluster
+              )
+            );
+            toast({
+              title: "Map updated",
+              description: "Location safety status has been updated.",
+            });
+          } else if (payload.eventType === "DELETE") {
+            setClusters((prev) =>
+              prev.filter((cluster) => cluster.id !== payload.old.id)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [toast]);
+
   useEffect(() => {
     if (!map) return;
 
@@ -80,50 +150,73 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
     markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current = [];
 
-    // Filter places
-    const filteredPlaces = places.filter((place) => {
-      const matchesCategory =
-        selectedCategory === "all" || place.category === selectedCategory;
-      const matchesSearch =
-        !searchQuery ||
-        place.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        place.type.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
+    // Combine hardcoded places with clusters
+    const allLocations = [
+      ...places.map(p => ({
+        ...p,
+        source: 'hardcoded' as const
+      })),
+      ...clusters.map(c => ({
+        id: c.id,
+        name: `Reported Location (${c.report_count} reports)`,
+        type: "Crowdsourced",
+        lat: c.lat,
+        lng: c.lng,
+        safetyLevel: (c.status === "unverified" ? "caution" : c.status) as "safe" | "caution" | "danger" | "avoid",
+        tip: `This location has ${c.report_count} user reports.`,
+        category: "shop" as const,
+        source: 'cluster' as const
+      }))
+    ];
+
+    // Filter locations
+    const filteredLocations = allLocations.filter((location) => {
+      if (location.source === 'hardcoded') {
+        const matchesCategory =
+          selectedCategory === "all" || location.category === selectedCategory;
+        const matchesSearch =
+          !searchQuery ||
+          location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          location.type.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCategory && matchesSearch;
+      }
+      // Always show clusters
+      return true;
     });
 
     // Add markers with animation delay
-    filteredPlaces.forEach((place, index) => {
+    filteredLocations.forEach((location, index) => {
       setTimeout(() => {
         const markerColor =
-          place.safetyLevel === "safe"
+          location.safetyLevel === "safe"
             ? "#22c55e"
-            : place.safetyLevel === "caution"
+            : location.safetyLevel === "caution"
             ? "#a855f7"
             : "#ef4444";
 
         const marker = new google.maps.Marker({
-          position: { lat: place.lat, lng: place.lng },
+          position: { lat: location.lat, lng: location.lng },
           map,
-          title: place.name,
+          title: location.name,
           icon: {
             path: google.maps.SymbolPath.CIRCLE,
-            scale: 10,
+            scale: location.source === 'cluster' ? 12 : 10,
             fillColor: markerColor,
-            fillOpacity: 0.9,
+            fillOpacity: location.source === 'cluster' ? 1 : 0.9,
             strokeColor: "#ffffff",
-            strokeWeight: 2,
+            strokeWeight: location.source === 'cluster' ? 3 : 2,
           },
           animation: google.maps.Animation.DROP,
         });
 
         marker.addListener("click", () => {
-          setSelectedPlace(place);
+          setSelectedPlace(location);
         });
 
         markersRef.current.push(marker);
       }, index * 100);
     });
-  }, [map, selectedCategory, searchQuery]);
+  }, [map, selectedCategory, searchQuery, clusters]);
 
   const getUserLocation = (): Promise<{ lat: number; lng: number }> => {
     return new Promise((resolve, reject) => {
