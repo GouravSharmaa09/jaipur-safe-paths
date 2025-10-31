@@ -55,12 +55,39 @@ const createCustomIcon = (color: string, isCluster: boolean = false) => {
   });
 };
 
-// Component to handle map updates
-const MapUpdater = ({ center, zoom }: { center: [number, number]; zoom: number }) => {
+// Component to handle map updates and provide map instance
+const MapController = ({ 
+  center, 
+  zoom,
+  onMapReady,
+  routeLayer,
+}: { 
+  center: [number, number]; 
+  zoom: number;
+  onMapReady: (map: L.Map) => void;
+  routeLayer: L.Polyline | null;
+}) => {
   const map = useMap();
+  
+  useEffect(() => {
+    onMapReady(map);
+  }, [map, onMapReady]);
+  
   useEffect(() => {
     map.setView(center, zoom);
   }, [center, zoom, map]);
+  
+  useEffect(() => {
+    if (routeLayer && map) {
+      routeLayer.addTo(map);
+      return () => {
+        if (map.hasLayer(routeLayer)) {
+          map.removeLayer(routeLayer);
+        }
+      };
+    }
+  }, [routeLayer, map]);
+  
   return null;
 };
 
@@ -141,7 +168,10 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   };
 
   const calculateRoute = async (destination: { lat: number; lng: number }) => {
-    if (!mapInstance) return;
+    if (!mapInstance) {
+      toast.error("Map not ready yet");
+      return;
+    }
 
     try {
       const origin = await getUserLocation();
@@ -160,16 +190,16 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
         const coordinates = route.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]] as [number, number]);
         
         // Remove old route if exists
-        if (routeLayer && mapInstance) {
-          mapInstance.removeLayer(routeLayer);
+        if (routeLayer) {
+          setRouteLayer(null);
         }
         
-        // Add new route
+        // Create new route
         const newRouteLayer = L.polyline(coordinates, {
           color: "#3b82f6",
           weight: 5,
           opacity: 0.7,
-        }).addTo(mapInstance);
+        });
         
         setRouteLayer(newRouteLayer);
         
@@ -215,10 +245,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
 
   const handleCloseRoute = () => {
     setRouteInfo(null);
-    if (routeLayer && mapInstance) {
-      mapInstance.removeLayer(routeLayer);
-      setRouteLayer(null);
-    }
+    setRouteLayer(null);
     if (navigationInterval) {
       clearInterval(navigationInterval);
       setNavigationInterval(null);
@@ -294,13 +321,17 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
           zoom={mapZoom}
           className="w-full h-full"
           style={{ minHeight: isFullScreen ? "100vh" : "500px", zIndex: 0 }}
-          ref={setMapInstance}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <MapUpdater center={mapCenter} zoom={mapZoom} />
+          <MapController 
+            center={mapCenter} 
+            zoom={mapZoom} 
+            onMapReady={setMapInstance}
+            routeLayer={routeLayer}
+          />
           
           {filteredLocations.map((location) => {
             const markerColor =
