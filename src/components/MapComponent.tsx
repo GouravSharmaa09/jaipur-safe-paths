@@ -87,6 +87,40 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
 
+    // Add click handler for map
+    map.on('click', async (e) => {
+      const { lat, lng } = e.latlng;
+      
+      // Get location address
+      const address = await reverseGeocode(lat, lng);
+      setLocationAddress(address);
+      
+      // Create temporary place for clicked location
+      const clickedPlace: Place = {
+        id: 'clicked-location',
+        name: 'Selected Location',
+        type: 'Map Click',
+        lat,
+        lng,
+        safetyLevel: 'caution',
+        tip: 'Location selected from map. Check for nearby safety reports.',
+        category: 'shop'
+      };
+      
+      setSelectedPlace(clickedPlace);
+      
+      // Calculate route to clicked location
+      calculateRoute({ lat, lng });
+      
+      // Add temporary marker at clicked location
+      const tempMarker = L.marker([lat, lng], {
+        icon: createCustomIcon('#3b82f6', false)
+      }).addTo(map).bindPopup(`<strong>Selected Location</strong><br/>${address}`).openPopup();
+      
+      // Store reference to remove later
+      markersRef.current.push(tempMarker);
+    });
+
     mapInstanceRef.current = map;
 
     return () => {
