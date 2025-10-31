@@ -14,25 +14,21 @@ const Splash = () => {
   const slides = [
     {
       title: "Safe-Bazaar",
-      subtitle: "Explore Jaipur Safely",
       description: "Your trusted companion for safe travel in the Pink City",
       image: hawaMahal
     },
     {
       title: "Real-time Safety",
-      subtitle: "सुरक्षित यात्रा",
       description: "Get live safety updates from the community",
       image: amerFort
     },
     {
       title: "Voice Navigation",
-      subtitle: "आवाज़ नेविगेशन",
       description: "Navigate with bilingual voice guidance",
       image: cityPalace
     },
     {
       title: "Report & Help",
-      subtitle: "रिपोर्ट करें",
       description: "Help others by sharing your safety experiences",
       image: bazaar
     }
@@ -49,7 +45,7 @@ const Splash = () => {
   useEffect(() => {
     const slideTimer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 3500);
+    }, 250);
 
     return () => clearInterval(slideTimer);
   }, []);
@@ -95,15 +91,12 @@ const Splash = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.2 }}
             className="text-center space-y-3"
           >
             <h1 className="text-4xl md:text-5xl font-bold gradient-primary bg-clip-text text-transparent">
               {slides[currentSlide].title}
             </h1>
-            <p className="text-xl md:text-2xl text-foreground/90 font-medium">
-              {slides[currentSlide].subtitle}
-            </p>
             <p className="text-sm md:text-base text-foreground/70">
               {slides[currentSlide].description}
             </p>

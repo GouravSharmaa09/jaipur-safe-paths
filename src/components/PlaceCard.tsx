@@ -45,9 +45,9 @@ const PlaceCard = ({ name, type, safetyLevel, tip, onClose, onGetRoute }: PlaceC
       initial={{ y: 50, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 50, opacity: 0 }}
-      className="fixed bottom-20 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-40"
+      className="fixed bottom-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:right-auto w-auto md:w-[90%] max-w-md z-40"
     >
-      <Card className="shadow-soft border-2">
+      <Card className="shadow-soft border-2 bg-background/95 backdrop-blur">
         <CardHeader className="flex flex-row items-start justify-between pb-3">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-lg ${config.color}`}>

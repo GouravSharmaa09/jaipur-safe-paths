@@ -84,10 +84,13 @@ export const SafetySuggestionDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto" aria-describedby="safety-description">
         <DialogHeader>
           <DialogTitle className="text-2xl">{placeName}</DialogTitle>
         </DialogHeader>
+        <p id="safety-description" className="sr-only">
+          AI-powered safety suggestions for this location
+        </p>
 
         <div className="space-y-4">
           <div className="flex gap-2">

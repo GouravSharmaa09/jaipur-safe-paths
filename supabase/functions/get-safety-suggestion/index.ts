@@ -13,9 +13,13 @@ serve(async (req) => {
 
   try {
     const { placeName, location, userReports } = await req.json();
+    console.log('Request received:', { placeName, location, userReports });
+    
     const GROQ_API_KEY = Deno.env.get('Groq_Api');
+    console.log('API Key exists:', !!GROQ_API_KEY);
 
     if (!GROQ_API_KEY) {
+      console.error('Groq_Api key not found in environment');
       throw new Error('Groq_Api key not configured');
     }
 
@@ -38,6 +42,7 @@ Provide a response in this exact JSON format:
   }
 }`;
 
+    console.log('Calling Groq API...');
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -58,15 +63,17 @@ Provide a response in this exact JSON format:
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Groq API error:', response.status, errorText);
-      throw new Error(`Groq API error: ${response.status}`);
+      throw new Error(`Groq API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    console.log('Groq API response received');
     const content = data.choices[0].message.content;
     
     // Parse JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     const safetyData = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
+    console.log('Safety data parsed successfully');
 
     return new Response(JSON.stringify(safetyData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
