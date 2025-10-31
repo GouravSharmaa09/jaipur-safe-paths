@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { MapPin, FileText, Info, User, Home } from "lucide-react";
+import { MapPin, FileText, Info, Mic, Home } from "lucide-react";
 import { motion } from "framer-motion";
 import logo from "@/assets/logo.png";
 
@@ -9,7 +9,7 @@ const Navbar = () => {
     { to: "/map", label: "Map", icon: MapPin },
     { to: "/report", label: "Report", icon: FileText },
     { to: "/about", label: "About", icon: Info },
-    { to: "/account", label: "Account", icon: User },
+    { to: "/ai-voice", label: "AI Voice", icon: Mic },
   ];
 
   return (
