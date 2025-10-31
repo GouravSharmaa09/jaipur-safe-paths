@@ -2,7 +2,6 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import MapComponent from "@/components/MapComponent";
-import SOSButton from "@/components/SOSButton";
 
 const Map = () => {
   const [selectedCategory] = useState("all");
@@ -24,8 +23,6 @@ const Map = () => {
           />
         </motion.div>
       </main>
-
-      <SOSButton />
     </div>
   );
 };

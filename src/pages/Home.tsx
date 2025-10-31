@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, MapPin, Loader2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import MapComponent from "@/components/MapComponent";
-import SOSButton from "@/components/SOSButton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -151,8 +150,6 @@ const Home = () => {
           />
         </motion.div>
       </main>
-
-      <SOSButton />
     </div>
   );
 };

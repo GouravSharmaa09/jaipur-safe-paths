@@ -3,7 +3,7 @@ import L from "leaflet";
 import PlaceCard from "./PlaceCard";
 import NavigationBar from "./NavigationBar";
 import RouteInfoCard from "./RouteInfoCard";
-import { places, Place } from "@/lib/mapData";
+import { places, Place, getRouteSafetyLevel } from "@/lib/mapData";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
 import { Maximize2 } from "lucide-react";
@@ -29,6 +29,8 @@ interface RouteInfo {
   distance: string;
   duration: string;
   destination: string;
+  safetyLevel?: "safe" | "caution" | "danger";
+  safetyWarning?: string;
 }
 
 // Fix for default marker icons
@@ -195,11 +197,25 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
         const distanceKm = (route.distance / 1000).toFixed(2);
         const durationMin = Math.round(route.duration / 60);
         
+        // Get safety level for this route
+        const routeSafety = getRouteSafetyLevel(destination);
+        
         setRouteInfo({
           distance: `${distanceKm} km`,
           duration: `${durationMin} min`,
           destination: selectedPlace?.name || "Selected location",
+          safetyLevel: routeSafety.level,
+          safetyWarning: routeSafety.warning,
         });
+        
+        // Show safety toast if there's a warning
+        if (routeSafety.warning) {
+          toast({
+            title: `Route Safety: ${routeSafety.level.toUpperCase()}`,
+            description: routeSafety.warning,
+            variant: routeSafety.level === "danger" ? "destructive" : "default",
+          });
+        }
       }
     } catch (error) {
       console.error("Route error:", error);
@@ -530,7 +546,9 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
             address={locationAddress}
             routeInfo={routeInfo ? {
               distance: routeInfo.distance,
-              duration: routeInfo.duration
+              duration: routeInfo.duration,
+              safetyLevel: routeInfo.safetyLevel,
+              safetyWarning: routeInfo.safetyWarning,
             } : undefined}
             isNavigating={isNavigating}
             onClose={() => {

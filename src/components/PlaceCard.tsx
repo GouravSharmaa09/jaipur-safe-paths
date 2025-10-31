@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MapPin, Shield, AlertTriangle, X, Navigation, Clock } from "lucide-react";
+import { MapPin, Shield, AlertTriangle, X, Navigation, Clock, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ interface PlaceCardProps {
   routeInfo?: {
     distance: string;
     duration: string;
+    safetyLevel?: "safe" | "caution" | "danger";
+    safetyWarning?: string;
   };
   isNavigating?: boolean;
   onClose: () => void;
@@ -58,6 +60,24 @@ const PlaceCard = ({
 
   const config = safetyConfig[safetyLevel];
   const Icon = config.icon;
+
+  const routeSafetyConfig = {
+    safe: {
+      icon: ShieldCheck,
+      color: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+      label: "Safe Route",
+    },
+    caution: {
+      icon: AlertTriangle,
+      color: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
+      label: "Use Caution",
+    },
+    danger: {
+      icon: ShieldAlert,
+      color: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+      label: "High Risk",
+    },
+  };
 
   return (
     <motion.div
@@ -113,6 +133,23 @@ const PlaceCard = ({
                     <span className="text-sm font-semibold">{routeInfo.duration}</span>
                   </div>
                 </div>
+                
+                {/* Route Safety Level */}
+                {routeInfo.safetyLevel && (() => {
+                  const RouteSafetyIcon = routeSafetyConfig[routeInfo.safetyLevel].icon;
+                  return (
+                    <div className={`flex items-start gap-2 p-2 rounded-lg border ${routeSafetyConfig[routeInfo.safetyLevel].color}`}>
+                      <RouteSafetyIcon className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold">{routeSafetyConfig[routeInfo.safetyLevel].label}</p>
+                        {routeInfo.safetyWarning && (
+                          <p className="text-xs mt-1 opacity-90">{routeInfo.safetyWarning}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+                
                 {onStartNavigation && (
                   <Button
                     onClick={onStartNavigation}
