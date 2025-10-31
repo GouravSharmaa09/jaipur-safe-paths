@@ -25,7 +25,7 @@ const Splash = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       navigate("/home");
-    }, 6000); // 3 seconds per slide * 2 slides
+    }, 7000); // Total 7 seconds for both slides
 
     return () => clearTimeout(timer);
   }, [navigate]);
@@ -33,10 +33,10 @@ const Splash = () => {
   useEffect(() => {
     const slideTimer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 3000); // 3 seconds per slide
+    }, 3500); // 3.5 seconds per slide
 
     return () => clearInterval(slideTimer);
-  }, []);
+  }, [slides.length]);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-background">

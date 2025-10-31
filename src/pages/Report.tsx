@@ -24,6 +24,7 @@ const Report = () => {
     address: "",
     safetyLevel: "safe" as "safe" | "caution" | "avoid",
     description: "",
+    selectedPlaceCoords: null as { lat: number; lng: number } | null,
   });
   const [addressSuggestions, setAddressSuggestions] = useState<Array<{ display_name: string; lat: string; lon: string }>>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -144,14 +145,20 @@ const Report = () => {
     setIsGeocoding(true);
 
     try {
-      // Geocode the address
-      const coordinates = await geocodeAddress(formData.address);
-      setIsGeocoding(false);
-
+      let coordinates = formData.selectedPlaceCoords;
+      
+      // If no pre-selected coordinates, try geocoding
       if (!coordinates) {
-        toast.error("Could not find location. Please check the address.");
-        setIsSubmitting(false);
-        return;
+        coordinates = await geocodeAddress(formData.address);
+        setIsGeocoding(false);
+
+        if (!coordinates) {
+          toast.error("Could not find location. Please check the address.");
+          setIsSubmitting(false);
+          return;
+        }
+      } else {
+        setIsGeocoding(false);
       }
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -190,6 +197,7 @@ const Report = () => {
         address: "",
         safetyLevel: "safe",
         description: "",
+        selectedPlaceCoords: null,
       });
     } catch (error) {
       console.error("Error submitting report:", error);
@@ -235,15 +243,17 @@ const Report = () => {
                   <Select
                     value={formData.placeName}
                     onValueChange={(value) => {
-                      setFormData({ ...formData, placeName: value });
-                      // Auto-fill address if available
+                      // Auto-fill address and coordinates if available
                       const selectedPlace = places.find(p => p.name === value);
                       if (selectedPlace) {
                         setFormData(prev => ({
                           ...prev,
                           placeName: value,
-                          address: selectedPlace.name + ", Jaipur, Rajasthan, India"
+                          address: selectedPlace.name + ", Jaipur, Rajasthan, India",
+                          selectedPlaceCoords: { lat: selectedPlace.lat, lng: selectedPlace.lng }
                         }));
+                      } else {
+                        setFormData(prev => ({ ...prev, placeName: value, selectedPlaceCoords: null }));
                       }
                     }}
                   >
