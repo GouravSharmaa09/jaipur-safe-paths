@@ -43,7 +43,7 @@ const Splash = () => {
         loop 
         playsInline
         preload="auto"
-        className="absolute inset-0 w-full h-full object-cover opacity-40"
+        className="absolute inset-0 w-full h-full object-cover opacity-60"
       >
         <source src="/videos/jaipur-splash.mp4" type="video/mp4" />
       </video>
