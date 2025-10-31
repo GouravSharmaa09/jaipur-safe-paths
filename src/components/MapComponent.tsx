@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef, useCallback } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
+import { useEffect, useState, useRef } from "react";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import { toast } from "sonner";
 import PlaceCard from "./PlaceCard";
@@ -55,51 +55,6 @@ const createCustomIcon = (color: string, isCluster: boolean = false) => {
   });
 };
 
-// Simpler component to handle map instance and events
-function MapEventHandler({ 
-  onMapReady, 
-  center, 
-  zoom 
-}: { 
-  onMapReady: (map: L.Map) => void;
-  center: [number, number];
-  zoom: number;
-}) {
-  const map = useMap();
-  const hasInitialized = useRef(false);
-
-  useEffect(() => {
-    if (!hasInitialized.current) {
-      onMapReady(map);
-      hasInitialized.current = true;
-    }
-  }, [map, onMapReady]);
-
-  useEffect(() => {
-    map.setView(center, zoom);
-  }, [center, zoom, map]);
-
-  return null;
-}
-
-// Component to handle route layer
-function RouteLayer({ routeLayer }: { routeLayer: L.Polyline | null }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (routeLayer && map) {
-      routeLayer.addTo(map);
-      return () => {
-        if (map.hasLayer(routeLayer)) {
-          map.removeLayer(routeLayer);
-        }
-      };
-    }
-  }, [routeLayer, map]);
-
-  return null;
-}
-
 const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
@@ -112,12 +67,8 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   const [selectedLocationForAI, setSelectedLocationForAI] = useState<{ name: string; location: string; reports?: number } | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>([26.9124, 75.7873]);
   const [mapZoom, setMapZoom] = useState(13);
-  const [routeLayer, setRouteLayer] = useState<L.Polyline | null>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
-
-  const handleMapReady = useCallback((map: L.Map) => {
-    mapInstanceRef.current = map;
-  }, []);
+  const mapRef = useRef<L.Map | null>(null);
+  const routeLayerRef = useRef<L.Polyline | null>(null);
 
   // Load clusters from Supabase and subscribe
   useEffect(() => {
@@ -181,7 +132,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   };
 
   const calculateRoute = async (destination: { lat: number; lng: number }) => {
-    if (!mapInstanceRef.current) {
+    if (!mapRef.current) {
       toast.error("Map not ready yet");
       return;
     }
@@ -203,8 +154,9 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
         const coordinates = route.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]] as [number, number]);
         
         // Remove old route if exists
-        if (routeLayer) {
-          setRouteLayer(null);
+        if (routeLayerRef.current && mapRef.current) {
+          mapRef.current.removeLayer(routeLayerRef.current);
+          routeLayerRef.current = null;
         }
         
         // Create new route
@@ -213,11 +165,12 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
           weight: 5,
           opacity: 0.7,
         });
-        
-        setRouteLayer(newRouteLayer);
+
+        newRouteLayer.addTo(mapRef.current);
+        routeLayerRef.current = newRouteLayer;
         
         // Fit bounds to show entire route
-        mapInstanceRef.current.fitBounds(newRouteLayer.getBounds(), { padding: [50, 50] });
+        mapRef.current.fitBounds(newRouteLayer.getBounds(), { padding: [50, 50] });
         
         const distanceKm = (route.distance / 1000).toFixed(2);
         const durationMin = Math.round(route.duration / 60);
@@ -248,6 +201,9 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
       try {
         const location = await getUserLocation();
         setMapCenter([location.lat, location.lng]);
+        if (mapRef.current) {
+          mapRef.current.setView([location.lat, location.lng]);
+        }
       } catch (error) {
         console.error("Navigation update error:", error);
       }
@@ -258,7 +214,10 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
 
   const handleCloseRoute = () => {
     setRouteInfo(null);
-    setRouteLayer(null);
+    if (routeLayerRef.current && mapRef.current) {
+      mapRef.current.removeLayer(routeLayerRef.current);
+      routeLayerRef.current = null;
+    }
     if (navigationInterval) {
       clearInterval(navigationInterval);
       setNavigationInterval(null);
@@ -301,6 +260,13 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
     return true;
   });
 
+  // Update map view when center changes
+  useEffect(() => {
+    if (mapRef.current) {
+      mapRef.current.setView(mapCenter, mapZoom);
+    }
+  }, [mapCenter, mapZoom]);
+
   return (
     <>
       <motion.div
@@ -334,17 +300,15 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
           zoom={mapZoom}
           className="w-full h-full"
           style={{ minHeight: isFullScreen ? "100vh" : "500px", zIndex: 0 }}
+          ref={mapRef}
+          whenReady={() => {
+            console.log("Map is ready");
+          }}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <MapEventHandler 
-            onMapReady={handleMapReady}
-            center={mapCenter}
-            zoom={mapZoom}
-          />
-          <RouteLayer routeLayer={routeLayer} />
           
           {filteredLocations.map((location) => {
             const markerColor =
