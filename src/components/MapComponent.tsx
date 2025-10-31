@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { toast } from "sonner";
@@ -68,13 +68,19 @@ const MapController = ({
   routeLayer: L.Polyline | null;
 }) => {
   const map = useMap();
+  const hasInitialized = useRef(false);
   
   useEffect(() => {
-    onMapReady(map);
+    if (!hasInitialized.current && map) {
+      onMapReady(map);
+      hasInitialized.current = true;
+    }
   }, [map, onMapReady]);
   
   useEffect(() => {
-    map.setView(center, zoom);
+    if (map) {
+      map.setView(center, zoom);
+    }
   }, [center, zoom, map]);
   
   useEffect(() => {
@@ -104,7 +110,11 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   const [mapCenter, setMapCenter] = useState<[number, number]>([26.9124, 75.7873]);
   const [mapZoom, setMapZoom] = useState(13);
   const [routeLayer, setRouteLayer] = useState<L.Polyline | null>(null);
-  const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+
+  const handleMapReady = useCallback((map: L.Map) => {
+    mapInstanceRef.current = map;
+  }, []);
 
   // Load clusters from Supabase and subscribe
   useEffect(() => {
@@ -168,7 +178,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   };
 
   const calculateRoute = async (destination: { lat: number; lng: number }) => {
-    if (!mapInstance) {
+    if (!mapInstanceRef.current) {
       toast.error("Map not ready yet");
       return;
     }
@@ -204,7 +214,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
         setRouteLayer(newRouteLayer);
         
         // Fit bounds to show entire route
-        mapInstance.fitBounds(newRouteLayer.getBounds(), { padding: [50, 50] });
+        mapInstanceRef.current.fitBounds(newRouteLayer.getBounds(), { padding: [50, 50] });
         
         const distanceKm = (route.distance / 1000).toFixed(2);
         const durationMin = Math.round(route.duration / 60);
@@ -329,7 +339,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
           <MapController 
             center={mapCenter} 
             zoom={mapZoom} 
-            onMapReady={setMapInstance}
+            onMapReady={handleMapReady}
             routeLayer={routeLayer}
           />
           
