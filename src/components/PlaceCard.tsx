@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
-import { MapPin, Shield, AlertTriangle, X, Navigation } from "lucide-react";
+import { MapPin, Shield, AlertTriangle, X, Navigation, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 interface PlaceCardProps {
   name: string;
@@ -10,11 +11,28 @@ interface PlaceCardProps {
   safetyLevel: "safe" | "caution" | "danger" | "avoid";
   tip: string;
   address?: string;
+  routeInfo?: {
+    distance: string;
+    duration: string;
+  };
+  isNavigating?: boolean;
   onClose: () => void;
   onGetRoute?: () => void;
+  onStartNavigation?: () => void;
 }
 
-const PlaceCard = ({ name, type, safetyLevel, tip, address, onClose, onGetRoute }: PlaceCardProps) => {
+const PlaceCard = ({ 
+  name, 
+  type, 
+  safetyLevel, 
+  tip, 
+  address, 
+  routeInfo,
+  isNavigating,
+  onClose, 
+  onGetRoute,
+  onStartNavigation 
+}: PlaceCardProps) => {
   const safetyConfig = {
     safe: {
       color: "bg-secondary text-secondary-foreground",
@@ -50,38 +68,68 @@ const PlaceCard = ({ name, type, safetyLevel, tip, address, onClose, onGetRoute 
     >
       <Card className="shadow-soft border-2 bg-background/95 backdrop-blur">
         <CardHeader className="flex flex-row items-start justify-between pb-3">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${config.color}`}>
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className={`p-2 rounded-lg ${config.color} flex-shrink-0`}>
               <Icon className="h-5 w-5" />
             </div>
-            <div>
-              <CardTitle className="text-lg">{name}</CardTitle>
-              <div className="flex flex-wrap gap-2 mt-1">
-                <Badge variant="outline">{type}</Badge>
-                <Badge className={config.color}>{config.label}</Badge>
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-base md:text-lg truncate">{name}</CardTitle>
+              <div className="flex flex-wrap gap-1 md:gap-2 mt-1">
+                <Badge variant="outline" className="text-xs">{type}</Badge>
+                <Badge className={`${config.color} text-xs`}>{config.label}</Badge>
               </div>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-muted transition-colors"
+            className="p-1 rounded-lg hover:bg-muted transition-colors flex-shrink-0"
           >
             <X className="h-4 w-4" />
           </button>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           {address && (
             <div className="flex items-start gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
-              <p className="text-sm font-medium text-foreground">{address}</p>
+              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+              <p className="text-xs md:text-sm font-medium text-foreground line-clamp-2">{address}</p>
             </div>
           )}
           <div className="flex items-start gap-2">
-            <Shield className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
-            <p className="text-sm text-muted-foreground">{tip}</p>
+            <Shield className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <p className="text-xs md:text-sm text-muted-foreground">{tip}</p>
           </div>
-          {onGetRoute && (
-            <Button onClick={onGetRoute} className="w-full" variant="outline">
+          
+          {routeInfo && (
+            <>
+              <Separator />
+              <div className="bg-primary/5 rounded-lg p-3 space-y-3">
+                <div className="flex items-center justify-around gap-4">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold">{routeInfo.distance}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold">{routeInfo.duration}</span>
+                  </div>
+                </div>
+                {onStartNavigation && (
+                  <Button
+                    onClick={onStartNavigation}
+                    className="w-full"
+                    size="sm"
+                    variant={isNavigating ? "secondary" : "default"}
+                  >
+                    <Navigation className="h-4 w-4 mr-2" />
+                    {isNavigating ? "Navigation Active" : "Start Navigation"}
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+          
+          {!routeInfo && onGetRoute && (
+            <Button onClick={onGetRoute} className="w-full" size="sm" variant="outline">
               <Navigation className="h-4 w-4 mr-2" />
               Get Route
             </Button>

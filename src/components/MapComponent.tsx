@@ -393,22 +393,18 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
             safetyLevel={selectedPlace.safetyLevel}
             tip={selectedPlace.tip}
             address={locationAddress}
+            routeInfo={routeInfo ? {
+              distance: routeInfo.distance,
+              duration: routeInfo.duration
+            } : undefined}
+            isNavigating={isNavigating}
             onClose={() => {
               setSelectedPlace(null);
               setLocationAddress("");
+              handleCloseRoute();
             }}
             onGetRoute={() => handleGetRoute(selectedPlace)}
-          />
-        )}
-
-        {routeInfo && (
-          <RouteInfoCard
-            distance={routeInfo.distance}
-            duration={routeInfo.duration}
-            destination={routeInfo.destination}
-            isNavigating={isNavigating}
             onStartNavigation={handleStartNavigation}
-            onClose={handleCloseRoute}
           />
         )}
       </motion.div>
