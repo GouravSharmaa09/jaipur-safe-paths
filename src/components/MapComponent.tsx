@@ -105,7 +105,8 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
         ref={mapRef}
-        className="w-full h-full rounded-2xl overflow-hidden shadow-card"
+        className="w-full h-full min-h-[500px] rounded-2xl overflow-hidden shadow-card"
+        style={{ height: '100%' }}
       />
       <AnimatePresence>
         {selectedPlace && (
