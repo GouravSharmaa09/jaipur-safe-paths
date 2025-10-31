@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { toast } from "sonner";
 import PlaceCard from "./PlaceCard";
@@ -10,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
 import { Maximize2, Box } from "lucide-react";
 import { motion } from "framer-motion";
+import "leaflet/dist/leaflet.css";
 
 interface LocationCluster {
   id: string;
@@ -55,19 +55,6 @@ const createCustomIcon = (color: string, isCluster: boolean = false) => {
   });
 };
 
-// Component to capture map instance
-function MapInstanceCapture({ onMapReady }: { onMapReady: (map: L.Map) => void }) {
-  const map = useMapEvents({});
-  
-  useEffect(() => {
-    if (map) {
-      onMapReady(map);
-    }
-  }, [map, onMapReady]);
-  
-  return null;
-}
-
 const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
@@ -80,17 +67,30 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   const [selectedLocationForAI, setSelectedLocationForAI] = useState<{ name: string; location: string; reports?: number } | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>([26.9124, 75.7873]);
   const [mapZoom, setMapZoom] = useState(13);
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
   const routeLayerRef = useRef<L.Polyline | null>(null);
-  const hasInitializedMap = useRef(false);
+  const markersRef = useRef<L.Marker[]>([]);
 
-  const handleMapReady = (map: L.Map) => {
-    if (!hasInitializedMap.current) {
-      mapRef.current = map;
-      hasInitializedMap.current = true;
-      console.log("Map instance captured");
-    }
-  };
+  // Initialize Leaflet map
+  useEffect(() => {
+    if (!mapRef.current || mapInstanceRef.current) return;
+
+    // Create map
+    const map = L.map(mapRef.current).setView(mapCenter, mapZoom);
+    
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    mapInstanceRef.current = map;
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+    };
+  }, []);
 
   // Load clusters from Supabase and subscribe
   useEffect(() => {
@@ -154,7 +154,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   };
 
   const calculateRoute = async (destination: { lat: number; lng: number }) => {
-    if (!mapRef.current) {
+    if (!mapInstanceRef.current) {
       toast.error("Map not ready yet");
       return;
     }
@@ -176,8 +176,8 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
         const coordinates = route.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]] as [number, number]);
         
         // Remove old route if exists
-        if (routeLayerRef.current && mapRef.current) {
-          mapRef.current.removeLayer(routeLayerRef.current);
+        if (routeLayerRef.current && mapInstanceRef.current) {
+          mapInstanceRef.current.removeLayer(routeLayerRef.current);
           routeLayerRef.current = null;
         }
         
@@ -188,11 +188,11 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
           opacity: 0.7,
         });
 
-        newRouteLayer.addTo(mapRef.current);
+        newRouteLayer.addTo(mapInstanceRef.current);
         routeLayerRef.current = newRouteLayer;
         
         // Fit bounds to show entire route
-        mapRef.current.fitBounds(newRouteLayer.getBounds(), { padding: [50, 50] });
+        mapInstanceRef.current.fitBounds(newRouteLayer.getBounds(), { padding: [50, 50] });
         
         const distanceKm = (route.distance / 1000).toFixed(2);
         const durationMin = Math.round(route.duration / 60);
@@ -223,8 +223,8 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
       try {
         const location = await getUserLocation();
         setMapCenter([location.lat, location.lng]);
-        if (mapRef.current) {
-          mapRef.current.setView([location.lat, location.lng]);
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.setView([location.lat, location.lng]);
         }
       } catch (error) {
         console.error("Navigation update error:", error);
@@ -236,8 +236,8 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
 
   const handleCloseRoute = () => {
     setRouteInfo(null);
-    if (routeLayerRef.current && mapRef.current) {
-      mapRef.current.removeLayer(routeLayerRef.current);
+    if (routeLayerRef.current && mapInstanceRef.current) {
+      mapInstanceRef.current.removeLayer(routeLayerRef.current);
       routeLayerRef.current = null;
     }
     if (navigationInterval) {
@@ -284,10 +284,47 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
 
   // Update map view when center changes
   useEffect(() => {
-    if (mapRef.current) {
-      mapRef.current.setView(mapCenter, mapZoom);
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.setView(mapCenter, mapZoom);
     }
   }, [mapCenter, mapZoom]);
+
+  // Update markers when filters change
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    // Clear existing markers
+    markersRef.current.forEach(marker => marker.remove());
+    markersRef.current = [];
+
+    // Add new markers
+    filteredLocations.forEach((location) => {
+      const markerColor =
+        location.safetyLevel === "safe"
+          ? "#22c55e"
+          : location.safetyLevel === "caution"
+          ? "#a855f7"
+          : "#ef4444";
+
+      const icon = createCustomIcon(markerColor, location.source === "cluster");
+
+      const marker = L.marker([location.lat, location.lng], { icon })
+        .addTo(mapInstanceRef.current!)
+        .bindPopup(`<strong>${location.name}</strong><br/>${location.type}`)
+        .on('click', () => {
+          setSelectedPlace(location);
+          setRouteInfo(null);
+          setSelectedLocationForAI({
+            name: location.name,
+            location: location.tip,
+            reports: location.source === "cluster" ? (location as any).report_count : undefined,
+          });
+          setShowSafetyDialog(true);
+        });
+
+      markersRef.current.push(marker);
+    });
+  }, [filteredLocations, selectedCategory, searchQuery]);
 
   return (
     <>
@@ -317,58 +354,11 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
           </Button>
         </div>
 
-        <MapContainer
-          center={mapCenter}
-          zoom={mapZoom}
+        <div
+          ref={mapRef}
           className="w-full h-full"
-          style={{ minHeight: isFullScreen ? "100vh" : "500px", zIndex: 0 }}
-        >
-          <MapInstanceCapture onMapReady={handleMapReady} />
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          
-          {filteredLocations.map((location) => {
-            const markerColor =
-              location.safetyLevel === "safe"
-                ? "#22c55e"
-                : location.safetyLevel === "caution"
-                ? "#a855f7"
-                : "#ef4444";
-
-            const icon = createCustomIcon(markerColor, location.source === "cluster");
-
-            return (
-              <Marker
-                key={location.id}
-                position={[location.lat, location.lng]}
-                icon={icon}
-                eventHandlers={{
-                  click: () => {
-                    setSelectedPlace(location);
-                    setRouteInfo(null);
-
-                    setSelectedLocationForAI({
-                      name: location.name,
-                      location: location.tip,
-                      reports: location.source === "cluster" ? (location as any).report_count : undefined,
-                    });
-                    setShowSafetyDialog(true);
-                  },
-                }}
-              >
-                <Popup>
-                  <div className="text-sm">
-                    <strong>{location.name}</strong>
-                    <br />
-                    <span className="text-muted-foreground">{location.type}</span>
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })}
-        </MapContainer>
+          style={{ minHeight: isFullScreen ? "100vh" : "500px" }}
+        />
 
         {selectedPlace && !isFullScreen && (
           <PlaceCard
