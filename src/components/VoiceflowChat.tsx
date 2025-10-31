@@ -1,12 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
-declare global {
-  interface Window {
-    voiceflow?: any;
-  }
-}
-
 const VoiceflowChat = () => {
   const location = useLocation();
   const isHomePage = location.pathname === '/home' || location.pathname === '/';

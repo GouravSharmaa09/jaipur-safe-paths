@@ -1,15 +1,25 @@
-import { NavLink } from "react-router-dom";
-import { MapPin, FileText, Info, Home } from "lucide-react";
+import { NavLink, useLocation } from "react-router-dom";
+import { MapPin, FileText, Info, Home, MessageSquare } from "lucide-react";
 import { motion } from "framer-motion";
+import { Button } from "./ui/button";
 import logo from "@/assets/logo.png";
 
 const Navbar = () => {
+  const location = useLocation();
+  const isHomePage = location.pathname === '/home' || location.pathname === '/';
+
   const navItems = [
     { to: "/", label: "Home", icon: Home },
     { to: "/map", label: "Map", icon: MapPin },
     { to: "/report", label: "Report", icon: FileText },
     { to: "/about", label: "About", icon: Info },
   ];
+
+  const handleOpenChat = () => {
+    if (window.voiceflow?.chat) {
+      window.voiceflow.chat.open();
+    }
+  };
 
   return (
     <motion.nav
@@ -43,6 +53,18 @@ const Navbar = () => {
               <span className="hidden md:inline">{item.label}</span>
             </NavLink>
           ))}
+          
+          {isHomePage && (
+            <Button
+              onClick={handleOpenChat}
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-2 px-3 py-2"
+            >
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden md:inline">AI Chat</span>
+            </Button>
+          )}
         </div>
       </div>
     </motion.nav>
