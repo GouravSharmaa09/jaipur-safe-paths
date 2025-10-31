@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
-import { MapPin, Shield, AlertTriangle, X } from "lucide-react";
+import { MapPin, Shield, AlertTriangle, X, Navigation } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface PlaceCardProps {
   name: string;
@@ -9,9 +10,10 @@ interface PlaceCardProps {
   safetyLevel: "safe" | "caution" | "danger";
   tip: string;
   onClose: () => void;
+  onGetRoute?: () => void;
 }
 
-const PlaceCard = ({ name, type, safetyLevel, tip, onClose }: PlaceCardProps) => {
+const PlaceCard = ({ name, type, safetyLevel, tip, onClose, onGetRoute }: PlaceCardProps) => {
   const safetyConfig = {
     safe: {
       color: "bg-secondary text-secondary-foreground",
@@ -60,11 +62,17 @@ const PlaceCard = ({ name, type, safetyLevel, tip, onClose }: PlaceCardProps) =>
             <X className="h-4 w-4" />
           </button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="flex items-start gap-2">
             <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
             <p className="text-sm text-muted-foreground">{tip}</p>
           </div>
+          {onGetRoute && (
+            <Button onClick={onGetRoute} className="w-full" variant="outline">
+              <Navigation className="h-4 w-4 mr-2" />
+              Get Route
+            </Button>
+          )}
         </CardContent>
       </Card>
     </motion.div>
