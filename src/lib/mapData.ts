@@ -55,6 +55,37 @@ export const routeSafetyData: RouteSegment[] = [
     safetyLevel: "danger",
     warning: "Not recommended after 9 PM. Poor lighting and isolated.",
   },
+  // Women Empowerment Centers - Safe Routes
+  {
+    start: { lat: 26.9124, lng: 75.7873 },
+    end: { lat: 26.9210, lng: 75.8190 }, // Women's Self-Help Center
+    safetyLevel: "safe",
+  },
+  {
+    start: { lat: 26.9124, lng: 75.7873 },
+    end: { lat: 26.9145, lng: 75.7895 }, // Mahila Shakti Kendra
+    safetyLevel: "safe",
+  },
+  {
+    start: { lat: 26.9124, lng: 75.7873 },
+    end: { lat: 26.9180, lng: 75.7980 }, // Women's Police Station
+    safetyLevel: "safe",
+  },
+  {
+    start: { lat: 26.9124, lng: 75.7873 },
+    end: { lat: 26.9320, lng: 75.8100 }, // Sakhi One Stop Center
+    safetyLevel: "safe",
+  },
+  {
+    start: { lat: 26.9124, lng: 75.7873 },
+    end: { lat: 26.9095, lng: 75.8340 }, // Women's Vocational Training
+    safetyLevel: "safe",
+  },
+  {
+    start: { lat: 26.9124, lng: 75.7873 },
+    end: { lat: 26.9125, lng: 75.8015 }, // Pink Auto Stand
+    safetyLevel: "safe",
+  },
 ];
 
 // Function to get route safety level based on destination
@@ -202,5 +233,65 @@ export const places: Place[] = [
     safetyLevel: "safe",
     tip: "Major tourist attraction with security. Safe during visiting hours.",
     category: "monument",
+  },
+  {
+    id: "11",
+    name: "Women's Self-Help Center",
+    type: "Women Empowerment",
+    lat: 26.9210,
+    lng: 75.8190,
+    safetyLevel: "safe",
+    tip: "24/7 support center for women. Safe space with trained counselors and legal aid.",
+    category: "shop",
+  },
+  {
+    id: "12",
+    name: "Mahila Shakti Kendra",
+    type: "Women Empowerment",
+    lat: 26.9145,
+    lng: 75.7895,
+    safetyLevel: "safe",
+    tip: "Government initiative for women empowerment. Skill training and safety workshops available.",
+    category: "shop",
+  },
+  {
+    id: "13",
+    name: "Women's Police Station",
+    type: "Women Safety",
+    lat: 26.9180,
+    lng: 75.7980,
+    safetyLevel: "safe",
+    tip: "Dedicated women's police station. 24/7 emergency response and support services.",
+    category: "shop",
+  },
+  {
+    id: "14",
+    name: "Sakhi One Stop Center",
+    type: "Women Support",
+    lat: 26.9320,
+    lng: 75.8100,
+    safetyLevel: "safe",
+    tip: "Comprehensive support center. Medical aid, counseling, and legal assistance for women in distress.",
+    category: "shop",
+  },
+  {
+    id: "15",
+    name: "Women's Vocational Training Institute",
+    type: "Women Empowerment",
+    lat: 26.9095,
+    lng: 75.8340,
+    safetyLevel: "safe",
+    tip: "Skill development center for women. Safe environment with career counseling services.",
+    category: "shop",
+  },
+  {
+    id: "16",
+    name: "Pink Auto Stand (Women Drivers)",
+    type: "Women Safety Transport",
+    lat: 26.9125,
+    lng: 75.8015,
+    safetyLevel: "safe",
+    tip: "Auto rickshaws driven by trained women drivers. Safe transport option for women travelers.",
+    category: "shop",
   },
 ];
