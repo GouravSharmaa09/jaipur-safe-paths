@@ -8,7 +8,6 @@ import Home from "./pages/Home";
 import Map from "./pages/Map";
 import Report from "./pages/Report";
 import About from "./pages/About";
-import AIVoiceNavigation from "./pages/AIVoiceNavigation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,7 +24,6 @@ const App = () => (
           <Route path="/map" element={<Map />} />
           <Route path="/report" element={<Report />} />
           <Route path="/about" element={<About />} />
-          <Route path="/ai-voice" element={<AIVoiceNavigation />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
