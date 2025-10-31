@@ -126,7 +126,7 @@ const Splash = () => {
             className="text-center space-y-3"
           >
             <motion.h1 
-              className="text-4xl md:text-5xl font-bold gradient-primary bg-clip-text text-transparent"
+              className="text-4xl md:text-5xl font-bold text-foreground"
               animate={{
                 textShadow: [
                   "0 0 20px rgba(255,255,255,0.3)",

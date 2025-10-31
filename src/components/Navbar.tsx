@@ -34,7 +34,7 @@ const Navbar = () => {
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
         <NavLink to="/" className="flex items-center gap-3 group">
           <img src={logo} alt="Safe-Bazaar" className="h-10 w-10 transition-transform group-hover:scale-110" />
-          <span className="text-xl font-bold gradient-primary bg-clip-text text-transparent hidden sm:inline">
+          <span className="text-xl font-bold text-foreground hidden sm:inline">
             Safe-Bazaar
           </span>
         </NavLink>
