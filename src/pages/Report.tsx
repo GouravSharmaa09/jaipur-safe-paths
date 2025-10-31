@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const Report = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -22,6 +23,51 @@ const Report = () => {
     safetyLevel: "safe" as "safe" | "caution" | "avoid",
     description: "",
   });
+  const [addressSuggestions, setAddressSuggestions] = useState<Array<{ display_name: string; lat: string; lon: string }>>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showAITip, setShowAITip] = useState(false);
+  const [aiTip, setAiTip] = useState({ english: "", hindi: "" });
+  const [isLoadingTip, setIsLoadingTip] = useState(false);
+
+  // Fetch address suggestions as user types
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (formData.address.length < 3) {
+        setAddressSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+            formData.address + ", Jaipur, Rajasthan, India"
+          )}&format=json&limit=5&addressdetails=1`,
+          {
+            headers: {
+              'User-Agent': 'JaipurSafetyApp/1.0'
+            }
+          }
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          setAddressSuggestions(data);
+          setShowSuggestions(data.length > 0);
+        }
+      } catch (error) {
+        console.error("Error fetching suggestions:", error);
+      }
+    };
+
+    const timer = setTimeout(fetchSuggestions, 500);
+    return () => clearTimeout(timer);
+  }, [formData.address]);
+
+  const selectSuggestion = (suggestion: { display_name: string; lat: string; lon: string }) => {
+    setFormData({ ...formData, address: suggestion.display_name });
+    setShowSuggestions(false);
+  };
 
   const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number } | null> => {
     try {
@@ -53,6 +99,34 @@ const Report = () => {
     } catch (error) {
       console.error("Geocoding error:", error);
       return null;
+    }
+  };
+
+  const fetchAISafetyTip = async (placeName: string, safetyLevel: string, location: string) => {
+    setIsLoadingTip(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('get-safety-suggestion', {
+        body: {
+          placeName,
+          location,
+          userReports: `Recent report: ${safetyLevel} level at ${placeName}`
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.safetyData) {
+        setAiTip({
+          english: data.safetyData.english || "Stay alert and aware of your surroundings.",
+          hindi: data.safetyData.hindi || "सतर्क रहें और अपने आसपास के बारे में जागरूक रहें।"
+        });
+        setShowAITip(true);
+      }
+    } catch (error) {
+      console.error("Error fetching AI tip:", error);
+      // Don't show error to user, just skip the tip
+    } finally {
+      setIsLoadingTip(false);
     }
   };
 
@@ -102,7 +176,12 @@ const Report = () => {
         throw error;
       }
 
-      toast.success("Thank you for your report! 🎉");
+      toast.success("Report submitted successfully! 🎉");
+      
+      // Fetch AI safety tip
+      await fetchAISafetyTip(formData.placeName, formData.safetyLevel, formData.address);
+      
+      // Reset form
       setFormData({
         placeName: "",
         userName: "",
@@ -176,20 +255,35 @@ const Report = () => {
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 relative">
                   <Label htmlFor="address" className="text-base">Address *</Label>
                   <Input
                     id="address"
-                    placeholder="e.g., MI Road, Near Panch Batti Circle"
+                    placeholder="e.g., Hawa Mahal, MI Road, Panch Batti"
                     value={formData.address}
                     onChange={(e) =>
                       setFormData({ ...formData, address: e.target.value })
                     }
+                    onFocus={() => addressSuggestions.length > 0 && setShowSuggestions(true)}
                     className="h-12 text-base"
                     required
                   />
+                  {showSuggestions && addressSuggestions.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-background border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {addressSuggestions.map((suggestion, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => selectSuggestion(suggestion)}
+                          className="w-full text-left px-4 py-3 hover:bg-accent transition-colors border-b border-border last:border-b-0"
+                        >
+                          <p className="text-sm font-medium">{suggestion.display_name}</p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <p className="text-xs text-muted-foreground">
-                    We'll automatically find the location coordinates
+                    Type to see suggestions • Coordinates will be found automatically
                   </p>
                 </div>
 
@@ -272,6 +366,33 @@ const Report = () => {
       </main>
 
       <SOSButton />
+
+      <Dialog open={showAITip} onOpenChange={setShowAITip}>
+        <DialogContent className="max-w-lg z-[9999]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Safety Tip</DialogTitle>
+            <DialogDescription>
+              AI-generated safety advice based on recent reports
+            </DialogDescription>
+          </DialogHeader>
+          {isLoadingTip ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-lg mb-2">🇬🇧 English</h3>
+                <p className="text-muted-foreground">{aiTip.english}</p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg mb-2">🇮🇳 हिंदी</h3>
+                <p className="text-muted-foreground">{aiTip.hindi}</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
