@@ -161,18 +161,13 @@ const Report = () => {
         setIsGeocoding(false);
       }
 
+      // Get user if logged in (optional)
       const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        toast.error("Please sign in to submit a report");
-        setIsSubmitting(false);
-        return;
-      }
 
       const { error } = await supabase
         .from("reports")
         .insert({
-          user_id: user.id,
+          user_id: user?.id || null, // Allow anonymous reports
           lat: coordinates.lat,
           lng: coordinates.lng,
           type: formData.safetyLevel,
