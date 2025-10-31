@@ -64,6 +64,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [showSafetyDialog, setShowSafetyDialog] = useState(false);
   const [selectedLocationForAI, setSelectedLocationForAI] = useState<{ name: string; location: string; reports?: number } | null>(null);
+  const [locationAddress, setLocationAddress] = useState<string>("");
   const [mapCenter, setMapCenter] = useState<[number, number]>([26.9124, 75.7873]);
   const [mapZoom, setMapZoom] = useState(13);
   const mapRef = useRef<HTMLDivElement>(null);
@@ -246,6 +247,36 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
     setIsNavigating(false);
   };
 
+  const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+        {
+          headers: {
+            'User-Agent': 'JaipurSafetyApp/1.0'
+          }
+        }
+      );
+      
+      if (!response.ok) throw new Error("Geocoding failed");
+      
+      const data = await response.json();
+      
+      // Build a nice address string
+      const parts = [];
+      if (data.address.road) parts.push(data.address.road);
+      if (data.address.suburb) parts.push(data.address.suburb);
+      if (data.address.city) parts.push(data.address.city);
+      else if (data.address.town) parts.push(data.address.town);
+      if (data.address.state) parts.push(data.address.state);
+      
+      return parts.length > 0 ? parts.join(", ") : data.display_name;
+    } catch (error) {
+      console.error("Reverse geocoding error:", error);
+      return "Location address unavailable";
+    }
+  };
+
   const allLocations = [
     ...places.map((p) => ({
       ...p,
@@ -306,15 +337,23 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
       const marker = L.marker([location.lat, location.lng], { icon })
         .addTo(mapInstanceRef.current!)
         .bindPopup(`<strong>${location.name}</strong><br/>${location.type}`)
-        .on('click', () => {
+        .on('click', async () => {
           setSelectedPlace(location);
           setRouteInfo(null);
+          
+          // Get address for the location
+          const address = await reverseGeocode(location.lat, location.lng);
+          setLocationAddress(address);
+          
           setSelectedLocationForAI({
             name: location.name,
-            location: location.tip,
+            location: `${location.name}, ${address}`,
             reports: location.source === "cluster" ? (location as any).report_count : undefined,
           });
           setShowSafetyDialog(true);
+          
+          // Auto-calculate route to show distance/duration
+          calculateRoute({ lat: location.lat, lng: location.lng });
         });
 
       markersRef.current.push(marker);
@@ -353,7 +392,11 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
             type={selectedPlace.type}
             safetyLevel={selectedPlace.safetyLevel}
             tip={selectedPlace.tip}
-            onClose={() => setSelectedPlace(null)}
+            address={locationAddress}
+            onClose={() => {
+              setSelectedPlace(null);
+              setLocationAddress("");
+            }}
             onGetRoute={() => handleGetRoute(selectedPlace)}
           />
         )}

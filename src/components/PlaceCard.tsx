@@ -9,11 +9,12 @@ interface PlaceCardProps {
   type: string;
   safetyLevel: "safe" | "caution" | "danger" | "avoid";
   tip: string;
+  address?: string;
   onClose: () => void;
   onGetRoute?: () => void;
 }
 
-const PlaceCard = ({ name, type, safetyLevel, tip, onClose, onGetRoute }: PlaceCardProps) => {
+const PlaceCard = ({ name, type, safetyLevel, tip, address, onClose, onGetRoute }: PlaceCardProps) => {
   const safetyConfig = {
     safe: {
       color: "bg-secondary text-secondary-foreground",
@@ -55,9 +56,10 @@ const PlaceCard = ({ name, type, safetyLevel, tip, onClose, onGetRoute }: PlaceC
             </div>
             <div>
               <CardTitle className="text-lg">{name}</CardTitle>
-              <Badge variant="outline" className="mt-1">
-                {type}
-              </Badge>
+              <div className="flex flex-wrap gap-2 mt-1">
+                <Badge variant="outline">{type}</Badge>
+                <Badge className={config.color}>{config.label}</Badge>
+              </div>
             </div>
           </div>
           <button
@@ -68,8 +70,14 @@ const PlaceCard = ({ name, type, safetyLevel, tip, onClose, onGetRoute }: PlaceC
           </button>
         </CardHeader>
         <CardContent className="space-y-4">
+          {address && (
+            <div className="flex items-start gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+              <p className="text-sm font-medium text-foreground">{address}</p>
+            </div>
+          )}
           <div className="flex items-start gap-2">
-            <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+            <Shield className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
             <p className="text-sm text-muted-foreground">{tip}</p>
           </div>
           {onGetRoute && (
