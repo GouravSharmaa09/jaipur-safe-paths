@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 
 declare global {
   interface Window {
@@ -7,6 +8,8 @@ declare global {
 }
 
 const VoiceflowChat = () => {
+  const location = useLocation();
+
   useEffect(() => {
     // Load Voiceflow chat widget
     const script = document.createElement('script');
@@ -35,14 +38,23 @@ const VoiceflowChat = () => {
       if (script && script.parentNode) {
         script.parentNode.removeChild(script);
       }
-      // Close chat widget on unmount
-      if (window.voiceflow?.chat) {
-        window.voiceflow.chat.close();
-      }
     };
   }, []);
 
-  return null; // This component doesn't render anything visible
+  // Show/hide widget based on route
+  useEffect(() => {
+    const isHomePage = location.pathname === '/home' || location.pathname === '/';
+    
+    if (window.voiceflow?.chat) {
+      if (isHomePage) {
+        window.voiceflow.chat.show();
+      } else {
+        window.voiceflow.chat.hide();
+      }
+    }
+  }, [location.pathname]);
+
+  return null;
 };
 
 export default VoiceflowChat;

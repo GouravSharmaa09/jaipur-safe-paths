@@ -4,7 +4,6 @@ import { Search } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import MapComponent from "@/components/MapComponent";
 import SOSButton from "@/components/SOSButton";
-import VoiceflowChat from "@/components/VoiceflowChat";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -94,7 +93,6 @@ const Home = () => {
       </main>
 
       <SOSButton />
-      <VoiceflowChat />
     </div>
   );
 };
