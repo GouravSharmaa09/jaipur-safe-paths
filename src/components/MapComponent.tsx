@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { toast } from "sonner";
 import PlaceCard from "./PlaceCard";
@@ -55,6 +55,19 @@ const createCustomIcon = (color: string, isCluster: boolean = false) => {
   });
 };
 
+// Component to capture map instance
+function MapInstanceCapture({ onMapReady }: { onMapReady: (map: L.Map) => void }) {
+  const map = useMapEvents({});
+  
+  useEffect(() => {
+    if (map) {
+      onMapReady(map);
+    }
+  }, [map, onMapReady]);
+  
+  return null;
+}
+
 const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
@@ -69,6 +82,15 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   const [mapZoom, setMapZoom] = useState(13);
   const mapRef = useRef<L.Map | null>(null);
   const routeLayerRef = useRef<L.Polyline | null>(null);
+  const hasInitializedMap = useRef(false);
+
+  const handleMapReady = (map: L.Map) => {
+    if (!hasInitializedMap.current) {
+      mapRef.current = map;
+      hasInitializedMap.current = true;
+      console.log("Map instance captured");
+    }
+  };
 
   // Load clusters from Supabase and subscribe
   useEffect(() => {
@@ -300,11 +322,8 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
           zoom={mapZoom}
           className="w-full h-full"
           style={{ minHeight: isFullScreen ? "100vh" : "500px", zIndex: 0 }}
-          ref={mapRef}
-          whenReady={() => {
-            console.log("Map is ready");
-          }}
         >
+          <MapInstanceCapture onMapReady={handleMapReady} />
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
