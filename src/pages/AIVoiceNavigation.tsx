@@ -16,7 +16,7 @@ const AIVoiceNavigation = () => {
     script.onload = function() {
       if (window.voiceflow) {
         window.voiceflow.chat.load({
-          verify: { projectID: '69050fd47690bc42cdad8566' },
+          verify: { projectID: '6905174e353d04e3f7aa12ae' },
           url: 'https://general-runtime.voiceflow.com',
           versionID: 'production',
           voice: {
