@@ -23,6 +23,13 @@ const AIVoiceNavigation = () => {
             url: "https://runtime-api.voiceflow.com"
           }
         });
+        
+        // Auto-open the chat widget after a short delay
+        setTimeout(() => {
+          if (window.voiceflow?.chat) {
+            window.voiceflow.chat.open();
+          }
+        }, 1000);
       }
     };
     script.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs";
@@ -36,6 +43,10 @@ const AIVoiceNavigation = () => {
       // Cleanup script on unmount
       if (script && script.parentNode) {
         script.parentNode.removeChild(script);
+      }
+      // Close chat widget on unmount
+      if (window.voiceflow?.chat) {
+        window.voiceflow.chat.close();
       }
     };
   }, []);
