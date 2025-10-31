@@ -6,7 +6,7 @@ import { SafetySuggestionDialog } from "./SafetySuggestionDialog";
 import { places, Place } from "@/lib/mapData";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
-import { Maximize2, Box, Volume2 } from "lucide-react";
+import { Maximize2, Box } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface LocationCluster {
@@ -43,7 +43,6 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   const [is3D, setIs3D] = useState(false);
   const [showSafetyDialog, setShowSafetyDialog] = useState(false);
   const [selectedLocationForAI, setSelectedLocationForAI] = useState<{ name: string; location: string; reports?: number } | null>(null);
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
 
   // Initialize map
   useEffect(() => {
@@ -261,12 +260,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
 
   const handleStartNavigation = () => {
     setIsNavigating(true);
-    setVoiceEnabled(true);
     toast.success("Navigation started!");
-
-    if (routeInfo) {
-      speakNavigation(`Starting navigation to ${routeInfo.destination}`);
-    }
 
     const interval = setInterval(async () => {
       try {
@@ -291,7 +285,6 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
       setNavigationInterval(null);
     }
     setIsNavigating(false);
-    setVoiceEnabled(false);
   };
 
   const toggle3D = () => {
@@ -307,27 +300,6 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
         setIs3D(false);
         toast.success("3D view disabled");
       }
-    }
-  };
-
-  const speakNavigation = async (instruction: string) => {
-    if (!voiceEnabled) return;
-
-    try {
-      const { data, error } = await supabase.functions.invoke("voice-navigation", {
-        body: { instruction, language: "english" },
-      });
-
-      if (error) throw error;
-
-      if ("speechSynthesis" in window && data?.instruction) {
-        const utterance = new SpeechSynthesisUtterance(data.instruction);
-        utterance.lang = "en-US";
-        utterance.rate = 0.9;
-        window.speechSynthesis.speak(utterance);
-      }
-    } catch (error) {
-      console.error("Voice navigation error:", error);
     }
   };
 
@@ -357,16 +329,6 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
           >
             <Box className="h-5 w-5" />
           </Button>
-          {isNavigating && (
-            <Button
-              size="icon"
-              variant="secondary"
-              onClick={() => setVoiceEnabled(!voiceEnabled)}
-              className={`shadow-lg ${voiceEnabled ? "bg-primary text-primary-foreground" : ""}`}
-            >
-              <Volume2 className="h-5 w-5" />
-            </Button>
-          )}
         </div>
 
         <div
