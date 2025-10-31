@@ -18,6 +18,9 @@ const Navbar = () => {
   const handleOpenChat = () => {
     if (window.voiceflow?.chat) {
       window.voiceflow.chat.open();
+      console.log('Opening Voiceflow chat');
+    } else {
+      console.log('Voiceflow not loaded yet');
     }
   };
 

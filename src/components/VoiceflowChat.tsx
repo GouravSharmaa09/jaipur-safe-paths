@@ -5,7 +5,7 @@ const VoiceflowChat = () => {
     // Check if script already loaded
     if (window.voiceflow) return;
 
-    // Load Voiceflow chat widget once
+    // Load Voiceflow chat widget
     const script = document.createElement('script');
     script.type = 'text/javascript';
     script.onload = function() {
@@ -17,12 +17,15 @@ const VoiceflowChat = () => {
           voice: {
             url: "https://runtime-api.voiceflow.com"
           },
-          autostart: false,
-          render: {
-            mode: 'embedded',
-            showLauncher: false
-          }
+          autostart: false
         });
+        
+        // Hide the chat immediately after loading
+        setTimeout(() => {
+          if (window.voiceflow?.chat) {
+            window.voiceflow.chat.hide();
+          }
+        }, 100);
       }
     };
     script.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs";
@@ -31,16 +34,6 @@ const VoiceflowChat = () => {
     if (firstScript && firstScript.parentNode) {
       firstScript.parentNode.insertBefore(script, firstScript);
     }
-
-    // Hide only the default launcher button, keep chat window functional
-    const style = document.createElement('style');
-    style.textContent = `
-      [class*="vfrc-launcher"],
-      [class*="VoiceflowLauncher"] {
-        display: none !important;
-      }
-    `;
-    document.head.appendChild(style);
   }, []);
 
   return null;
