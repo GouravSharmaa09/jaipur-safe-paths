@@ -14,67 +14,88 @@ import { supabase } from "@/integrations/supabase/client";
 
 const Report = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const [formData, setFormData] = useState({
     placeName: "",
-    location: "",
-    lat: "",
-    lng: "",
+    userName: "",
+    address: "",
     safetyLevel: "safe" as "safe" | "caution" | "avoid",
-    experience: "",
+    description: "",
   });
+
+  const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number } | null> => {
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+          address + ", Jaipur, Rajasthan, India"
+        )}&key=AIzaSyAe8JOEQhIhMQZ5Y8-0RsrSl8X5mLOLN0E`
+      );
+      const data = await response.json();
+      
+      if (data.status === "OK" && data.results[0]) {
+        return {
+          lat: data.results[0].geometry.location.lat,
+          lng: data.results[0].geometry.location.lng,
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error("Geocoding error:", error);
+      return null;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.placeName || !formData.address || !formData.description) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+
     setIsSubmitting(true);
+    setIsGeocoding(true);
 
     try {
-      // Validate coordinates
-      const latitude = parseFloat(formData.lat);
-      const longitude = parseFloat(formData.lng);
+      // Geocode the address
+      const coordinates = await geocodeAddress(formData.address);
+      setIsGeocoding(false);
 
-      if (isNaN(latitude) || isNaN(longitude)) {
-        toast.error("Invalid coordinates", {
-          description: "Please enter valid latitude and longitude values.",
-        });
+      if (!coordinates) {
+        toast.error("Could not find location. Please check the address.");
         setIsSubmitting(false);
         return;
       }
 
-      // Check if user is authenticated
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Insert report
       const { error } = await supabase
         .from("reports")
         .insert({
           user_id: user?.id || null,
-          lat: latitude,
-          lng: longitude,
+          lat: coordinates.lat,
+          lng: coordinates.lng,
           type: formData.safetyLevel,
           place_name: formData.placeName,
-          description: formData.experience,
+          description: `${formData.userName ? `Reported by: ${formData.userName}\n` : ""}${formData.description}`,
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Database error:", error);
+        throw error;
+      }
 
-      toast.success("Thank you for your report!", {
-        description: "Your report has been submitted and will help others stay safe.",
-      });
-
-      // Reset form
+      toast.success("Thank you for your report! 🎉");
       setFormData({
         placeName: "",
-        location: "",
-        lat: "",
-        lng: "",
+        userName: "",
+        address: "",
         safetyLevel: "safe",
-        experience: "",
+        description: "",
       });
     } catch (error) {
       console.error("Error submitting report:", error);
-      toast.error("Failed to submit report", {
-        description: "Please try again later.",
-      });
+      toast.error("Failed to submit report. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -90,126 +111,137 @@ const Report = () => {
           animate={{ y: 0, opacity: 1 }}
           className="max-w-2xl mx-auto"
         >
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold gradient-primary bg-clip-text text-transparent mb-2">
+          <div className="text-center mb-6">
+            <h1 className="text-3xl md:text-4xl font-bold gradient-primary bg-clip-text text-transparent mb-2">
               Report a Location
             </h1>
-            <p className="text-muted-foreground">
-              Help fellow travelers stay safe by sharing your experience
+            <p className="text-muted-foreground text-sm md:text-base">
+              Help others by sharing your safety experience
             </p>
           </div>
 
-          <Card className="shadow-soft">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-primary" />
-                Safety Report Form
+          <Card className="shadow-elevated">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-2xl md:text-3xl flex items-center gap-2">
+                <MapPin className="h-6 w-6 text-primary" />
+                Safety Report
               </CardTitle>
-              <CardDescription>
-                Your input helps us maintain accurate safety information for all travelers
+              <CardDescription className="text-base">
+                Your input helps maintain accurate safety information
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="place-name">Place Name</Label>
+                  <Label htmlFor="placeName" className="text-base">Place Name *</Label>
                   <Input
-                    id="place-name"
-                    placeholder="Enter the name of the location"
+                    id="placeName"
+                    placeholder="e.g., Hawa Mahal, Amer Fort"
                     value={formData.placeName}
-                    onChange={(e) => setFormData({ ...formData, placeName: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, placeName: e.target.value })
+                    }
+                    className="h-12 text-base"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="location">Location/Address</Label>
+                  <Label htmlFor="userName" className="text-base">Your Name (Optional)</Label>
                   <Input
-                    id="location"
-                    placeholder="Specific address or landmark"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    required
+                    id="userName"
+                    placeholder="Your name"
+                    value={formData.userName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, userName: e.target.value })
+                    }
+                    className="h-12 text-base"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="latitude">Latitude</Label>
-                    <Input
-                      id="latitude"
-                      type="number"
-                      step="any"
-                      placeholder="26.9124"
-                      value={formData.lat}
-                      onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="longitude">Longitude</Label>
-                    <Input
-                      id="longitude"
-                      type="number"
-                      step="any"
-                      placeholder="75.7873"
-                      value={formData.lng}
-                      onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
-                      required
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address" className="text-base">Address *</Label>
+                  <Input
+                    id="address"
+                    placeholder="e.g., MI Road, Near Panch Batti Circle"
+                    value={formData.address}
+                    onChange={(e) =>
+                      setFormData({ ...formData, address: e.target.value })
+                    }
+                    className="h-12 text-base"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    We'll automatically find the location coordinates
+                  </p>
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Safety Level</Label>
-                  <RadioGroup 
+                  <Label className="text-base">Safety Level *</Label>
+                  <RadioGroup
                     value={formData.safetyLevel}
-                    onValueChange={(value) => setFormData({ ...formData, safetyLevel: value as "safe" | "caution" | "avoid" })}
+                    onValueChange={(value: "safe" | "caution" | "avoid") =>
+                      setFormData({ ...formData, safetyLevel: value })
+                    }
+                    className="space-y-3"
                   >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="safe" id="safe" />
-                      <Label htmlFor="safe" className="font-normal cursor-pointer">
-                        Safe - Recommended for all travelers
+                    <div className="flex items-center space-x-3 p-4 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-accent/30 transition-all cursor-pointer">
+                      <RadioGroupItem value="safe" id="safe" className="h-5 w-5" />
+                      <Label htmlFor="safe" className="flex-1 cursor-pointer text-base font-medium">
+                        ✅ Safe - Well-lit and crowded
                       </Label>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="caution" id="caution" />
-                      <Label htmlFor="caution" className="font-normal cursor-pointer">
-                        Caution - Be aware of surroundings
+                    <div className="flex items-center space-x-3 p-4 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-accent/30 transition-all cursor-pointer">
+                      <RadioGroupItem value="caution" id="caution" className="h-5 w-5" />
+                      <Label htmlFor="caution" className="flex-1 cursor-pointer text-base font-medium">
+                        ⚠️ Caution - Be careful here
                       </Label>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="avoid" id="avoid" />
-                      <Label htmlFor="avoid" className="font-normal cursor-pointer">
-                        Avoid - Not recommended, especially at night
+                    <div className="flex items-center space-x-3 p-4 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-accent/30 transition-all cursor-pointer">
+                      <RadioGroupItem value="avoid" id="avoid" className="h-5 w-5" />
+                      <Label htmlFor="avoid" className="flex-1 cursor-pointer text-base font-medium">
+                        🚫 Danger - Avoid this area
                       </Label>
                     </div>
                   </RadioGroup>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="experience">Your Experience</Label>
+                  <Label htmlFor="description" className="text-base">Description *</Label>
                   <Textarea
-                    id="experience"
-                    placeholder="Describe your experience and any safety tips..."
-                    rows={5}
-                    value={formData.experience}
-                    onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                    id="description"
+                    placeholder="Share details about safety, crowd, lighting, time of visit, etc."
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     required
+                    rows={5}
+                    className="text-base resize-none"
                   />
                 </div>
 
                 <div className="bg-muted/50 p-4 rounded-lg flex gap-3">
                   <AlertTriangle className="h-5 w-5 text-accent flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-muted-foreground">
-                    All submissions are reviewed before being added to the map. False reports may result in account restrictions.
+                    All submissions are reviewed. False reports may result in restrictions.
                   </p>
                 </div>
 
-                <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
-                  {isSubmitting ? (
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || isGeocoding}
+                  className="w-full h-14 text-lg font-semibold"
+                  size="lg"
+                >
+                  {isGeocoding ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Finding Location...
+                    </>
+                  ) : isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       Submitting...
                     </>
                   ) : (

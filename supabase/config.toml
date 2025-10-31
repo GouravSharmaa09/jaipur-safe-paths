@@ -1,1 +1,7 @@
 project_id = "cpcwxzzubbjfuiaxiaiq"
+
+[functions.get-safety-suggestion]
+verify_jwt = false
+
+[functions.voice-navigation]
+verify_jwt = false
