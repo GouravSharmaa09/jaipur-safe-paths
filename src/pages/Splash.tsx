@@ -36,18 +36,16 @@ const Splash = () => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-gradient-to-br from-primary/20 via-background to-accent/20">
-      {/* Video Background from Pexels */}
+      {/* Video Background */}
       <video 
         autoPlay 
         muted 
         loop 
         playsInline
         preload="auto"
-        crossOrigin="anonymous"
         className="absolute inset-0 w-full h-full object-cover opacity-40"
       >
-        <source src="https://videos.pexels.com/video-files/28456071/12409440_1280_720_25fps.mp4" type="video/mp4" />
-        <source src="https://videos.pexels.com/video-files/28456071/12409440_640_360_25fps.mp4" type="video/mp4" />
+        <source src="/videos/jaipur-splash.mp4" type="video/mp4" />
       </video>
       
       {/* Animated Mandala Pattern Overlay */}
