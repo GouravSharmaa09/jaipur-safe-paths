@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from "react";
 import L from "leaflet";
-import { toast } from "sonner";
 import PlaceCard from "./PlaceCard";
 import NavigationBar from "./NavigationBar";
 import RouteInfoCard from "./RouteInfoCard";
@@ -116,12 +115,10 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
         (payload) => {
           if (payload.eventType === "INSERT") {
             setClusters((prev) => [...prev, payload.new as LocationCluster]);
-            toast.success("Map updated with new reports");
           } else if (payload.eventType === "UPDATE") {
             setClusters((prev) =>
               prev.map((c) => (c.id === payload.new.id ? (payload.new as LocationCluster) : c))
             );
-            toast.info("Location status updated");
           }
         }
       )
@@ -153,7 +150,6 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
 
   const calculateRoute = async (destination: { lat: number; lng: number }) => {
     if (!mapInstanceRef.current) {
-      toast.error("Map not ready yet");
       return;
     }
 
@@ -200,12 +196,9 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
           duration: `${durationMin} min`,
           destination: selectedPlace?.name || "Selected location",
         });
-
-        toast.success(`Route: ${distanceKm} km • ${durationMin} min`);
       }
     } catch (error) {
       console.error("Route error:", error);
-      toast.error("Could not calculate route. Enable location access.");
     }
   };
 
@@ -215,7 +208,6 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
 
   const handleStartNavigation = () => {
     setIsNavigating(true);
-    toast.success("Navigation started!");
 
     const interval = setInterval(async () => {
       try {
@@ -243,7 +235,6 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
       }
     } catch (error) {
       console.error("Center location error:", error);
-      toast.error("Could not get your location");
     }
   };
 

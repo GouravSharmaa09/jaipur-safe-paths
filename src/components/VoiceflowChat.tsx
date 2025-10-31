@@ -9,8 +9,12 @@ declare global {
 
 const VoiceflowChat = () => {
   const location = useLocation();
+  const isHomePage = location.pathname === '/home' || location.pathname === '/';
 
   useEffect(() => {
+    // Only load chatbot on home page
+    if (!isHomePage) return;
+
     // Load Voiceflow chat widget
     const script = document.createElement('script');
     script.type = 'text/javascript';
@@ -38,21 +42,12 @@ const VoiceflowChat = () => {
       if (script && script.parentNode) {
         script.parentNode.removeChild(script);
       }
-    };
-  }, []);
-
-  // Show/hide widget based on route
-  useEffect(() => {
-    const isHomePage = location.pathname === '/home' || location.pathname === '/';
-    
-    if (window.voiceflow?.chat) {
-      if (isHomePage) {
-        window.voiceflow.chat.show();
-      } else {
-        window.voiceflow.chat.hide();
+      // Remove widget completely
+      if (window.voiceflow?.chat) {
+        window.voiceflow.chat.close();
       }
-    }
-  }, [location.pathname]);
+    };
+  }, [isHomePage]);
 
   return null;
 };

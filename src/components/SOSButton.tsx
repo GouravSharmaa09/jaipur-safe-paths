@@ -1,13 +1,11 @@
 import { motion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 
 const SOSButton = () => {
   const handleSOS = () => {
-    toast.error("SOS Alert Sent!", {
-      description: "Emergency services have been notified. Stay safe!",
-    });
+    // SOS functionality - could trigger emergency services in a real app
+    console.log("SOS Alert triggered");
   };
 
   return (
