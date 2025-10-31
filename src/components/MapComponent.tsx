@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
 import { Maximize2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useMap } from "@/contexts/MapContext";
+import { useToast } from "@/hooks/use-toast";
 import "leaflet/dist/leaflet.css";
 
 interface LocationCluster {
@@ -68,6 +70,8 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   const mapInstanceRef = useRef<L.Map | null>(null);
   const routeLayerRef = useRef<L.Polyline | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
+  const { selectedLocation, routeRequest } = useMap();
+  const { toast } = useToast();
 
   // Initialize Leaflet map
   useEffect(() => {
@@ -318,6 +322,140 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
       mapInstanceRef.current.setView(mapCenter, mapZoom);
     }
   }, [mapCenter, mapZoom]);
+
+  // Handle selected location from search
+  useEffect(() => {
+    if (!selectedLocation || !mapInstanceRef.current) return;
+
+    // Center map on selected location
+    mapInstanceRef.current.setView([selectedLocation.lat, selectedLocation.lng], 15, {
+      animate: true,
+      duration: 1
+    });
+
+    // Find if this location matches any existing place/cluster
+    const matchingPlace = allLocations.find(loc => 
+      Math.abs(loc.lat - selectedLocation.lat) < 0.01 && 
+      Math.abs(loc.lng - selectedLocation.lng) < 0.01
+    );
+
+    if (matchingPlace) {
+      setSelectedPlace(matchingPlace);
+      calculateRoute({ lat: matchingPlace.lat, lng: matchingPlace.lng });
+    } else {
+      // Create a temporary place marker
+      const tempPlace: Place = {
+        id: 'temp-search',
+        name: selectedLocation.name,
+        type: 'Searched Location',
+        lat: selectedLocation.lat,
+        lng: selectedLocation.lng,
+        safetyLevel: 'caution',
+        tip: 'Check local reports for safety information',
+        category: 'shop'
+      };
+      setSelectedPlace(tempPlace);
+      
+      // Get address and safety info
+      reverseGeocode(selectedLocation.lat, selectedLocation.lng).then(setLocationAddress);
+      
+      // Check if there are nearby clusters for safety info
+      const nearbyCluster = clusters.find(c => {
+        const distance = Math.sqrt(
+          Math.pow(c.lat - selectedLocation.lat, 2) + 
+          Math.pow(c.lng - selectedLocation.lng, 2)
+        );
+        return distance < 0.01;
+      });
+
+      if (nearbyCluster) {
+        toast({
+          title: "Safety Information",
+          description: `This area has ${nearbyCluster.report_count} user reports. Status: ${nearbyCluster.status}`,
+        });
+      }
+      
+      calculateRoute({ lat: selectedLocation.lat, lng: selectedLocation.lng });
+    }
+  }, [selectedLocation, clusters]);
+
+  // Handle route requests from AI agent
+  useEffect(() => {
+    if (!routeRequest) return;
+
+    const { destination } = routeRequest;
+    
+    // Find or create place for destination
+    const matchingPlace = allLocations.find(loc => 
+      Math.abs(loc.lat - destination.lat) < 0.01 && 
+      Math.abs(loc.lng - destination.lng) < 0.01
+    );
+
+    const placeToShow = matchingPlace || {
+      id: 'ai-route',
+      name: destination.name,
+      type: 'AI Suggested Route',
+      lat: destination.lat,
+      lng: destination.lng,
+      safetyLevel: 'caution' as const,
+      tip: 'Route suggested by AI assistant',
+      category: 'shop' as const
+    };
+
+    setSelectedPlace(placeToShow);
+    
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.setView([destination.lat, destination.lng], 14, {
+        animate: true,
+        duration: 1
+      });
+    }
+    
+    calculateRoute({ lat: destination.lat, lng: destination.lng });
+    
+    toast({
+      title: "Route Calculated",
+      description: `Showing route to ${destination.name}`,
+    });
+  }, [routeRequest]);
+
+  // Listen for AI agent route requests
+  useEffect(() => {
+    const handleRouteRequest = (event: any) => {
+      const { detail } = event;
+      if (detail && detail.lat && detail.lng && detail.name) {
+        const placeToShow: Place = {
+          id: 'ai-route',
+          name: detail.name,
+          type: 'AI Suggested Route',
+          lat: detail.lat,
+          lng: detail.lng,
+          safetyLevel: 'caution',
+          tip: 'Route suggested by AI assistant',
+          category: 'shop'
+        };
+        
+        setSelectedPlace(placeToShow);
+        
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.setView([detail.lat, detail.lng], 14, {
+            animate: true,
+            duration: 1
+          });
+        }
+        
+        calculateRoute({ lat: detail.lat, lng: detail.lng });
+        
+        toast({
+          title: "Route from AI Chat",
+          description: `Showing route to ${detail.name}`,
+        });
+      }
+    };
+
+    window.addEventListener('mapRouteRequest', handleRouteRequest);
+    return () => window.removeEventListener('mapRouteRequest', handleRouteRequest);
+  }, []);
 
   // Update markers when filters change
   useEffect(() => {

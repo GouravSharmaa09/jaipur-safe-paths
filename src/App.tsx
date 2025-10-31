@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import VoiceflowChat from "./components/VoiceflowChat";
+import { MapProvider } from "./contexts/MapContext";
 import Splash from "./pages/Splash";
 import Home from "./pages/Home";
 import Map from "./pages/Map";
@@ -16,20 +17,22 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <VoiceflowChat />
-        <Routes>
-          <Route path="/" element={<Splash />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/map" element={<Map />} />
-          <Route path="/report" element={<Report />} />
-          <Route path="/about" element={<About />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <MapProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <VoiceflowChat />
+          <Routes>
+            <Route path="/" element={<Splash />} />
+            <Route path="/home" element={<Home />} />
+            <Route path="/map" element={<Map />} />
+            <Route path="/report" element={<Report />} />
+            <Route path="/about" element={<About />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </MapProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
