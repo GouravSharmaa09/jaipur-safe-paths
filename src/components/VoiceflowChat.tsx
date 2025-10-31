@@ -1,15 +1,11 @@
 import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
 
 const VoiceflowChat = () => {
-  const location = useLocation();
-  const isHomePage = location.pathname === '/home' || location.pathname === '/';
-
   useEffect(() => {
-    // Only load chatbot on home page
-    if (!isHomePage) return;
+    // Check if script already loaded
+    if (window.voiceflow) return;
 
-    // Load Voiceflow chat widget
+    // Load Voiceflow chat widget once
     const script = document.createElement('script');
     script.type = 'text/javascript';
     script.onload = function() {
@@ -31,17 +27,18 @@ const VoiceflowChat = () => {
       firstScript.parentNode.insertBefore(script, firstScript);
     }
 
-    return () => {
-      // Cleanup script on unmount
-      if (script && script.parentNode) {
-        script.parentNode.removeChild(script);
+    // Add CSS to hide the default Voiceflow launcher button
+    const style = document.createElement('style');
+    style.textContent = `
+      #voiceflow-chat-frame,
+      [class*="vfrc-launcher"],
+      [class*="VoiceflowLauncher"],
+      div[style*="position: fixed"][style*="bottom"][style*="right"] iframe {
+        display: none !important;
       }
-      // Remove widget completely
-      if (window.voiceflow?.chat) {
-        window.voiceflow.chat.close();
-      }
-    };
-  }, [isHomePage]);
+    `;
+    document.head.appendChild(style);
+  }, []);
 
   return null;
 };
