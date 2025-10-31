@@ -3,7 +3,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import VoiceflowChat from "./components/VoiceflowChat";
 import Splash from "./pages/Splash";
 import Home from "./pages/Home";
 import Map from "./pages/Map";
@@ -18,7 +17,6 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <VoiceflowChat />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Splash />} />
