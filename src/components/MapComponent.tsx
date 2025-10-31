@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { toast } from "sonner";
 import PlaceCard from "./PlaceCard";
@@ -55,34 +55,37 @@ const createCustomIcon = (color: string, isCluster: boolean = false) => {
   });
 };
 
-// Component to handle map updates and provide map instance
-const MapController = ({ 
+// Simpler component to handle map instance and events
+function MapEventHandler({ 
+  onMapReady, 
   center, 
-  zoom,
-  onMapReady,
-  routeLayer,
+  zoom 
 }: { 
-  center: [number, number]; 
-  zoom: number;
   onMapReady: (map: L.Map) => void;
-  routeLayer: L.Polyline | null;
-}) => {
+  center: [number, number];
+  zoom: number;
+}) {
   const map = useMap();
   const hasInitialized = useRef(false);
-  
+
   useEffect(() => {
-    if (!hasInitialized.current && map) {
+    if (!hasInitialized.current) {
       onMapReady(map);
       hasInitialized.current = true;
     }
   }, [map, onMapReady]);
-  
+
   useEffect(() => {
-    if (map) {
-      map.setView(center, zoom);
-    }
+    map.setView(center, zoom);
   }, [center, zoom, map]);
-  
+
+  return null;
+}
+
+// Component to handle route layer
+function RouteLayer({ routeLayer }: { routeLayer: L.Polyline | null }) {
+  const map = useMap();
+
   useEffect(() => {
     if (routeLayer && map) {
       routeLayer.addTo(map);
@@ -93,9 +96,9 @@ const MapController = ({
       };
     }
   }, [routeLayer, map]);
-  
+
   return null;
-};
+}
 
 const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
@@ -336,12 +339,12 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <MapController 
-            center={mapCenter} 
-            zoom={mapZoom} 
+          <MapEventHandler 
             onMapReady={handleMapReady}
-            routeLayer={routeLayer}
+            center={mapCenter}
+            zoom={mapZoom}
           />
+          <RouteLayer routeLayer={routeLayer} />
           
           {filteredLocations.map((location) => {
             const markerColor =
