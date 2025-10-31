@@ -34,6 +34,20 @@ const VoiceflowChat = () => {
     if (firstScript && firstScript.parentNode) {
       firstScript.parentNode.insertBefore(script, firstScript);
     }
+
+    // Add CSS to control z-index and keep chatbot behind map
+    const style = document.createElement('style');
+    style.textContent = `
+      #voiceflow-chat,
+      [class*="vfrc-widget"],
+      [class*="vfrc-chat"] {
+        z-index: 10 !important;
+      }
+      .leaflet-container {
+        z-index: 20 !important;
+      }
+    `;
+    document.head.appendChild(style);
   }, []);
 
   return null;
