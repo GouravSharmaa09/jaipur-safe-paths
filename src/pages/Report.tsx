@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { places } from "@/lib/mapData";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Report = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -230,15 +232,42 @@ const Report = () => {
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="placeName" className="text-base">Place Name *</Label>
+                  <Select
+                    value={formData.placeName}
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, placeName: value });
+                      // Auto-fill address if available
+                      const selectedPlace = places.find(p => p.name === value);
+                      if (selectedPlace) {
+                        setFormData(prev => ({
+                          ...prev,
+                          placeName: value,
+                          address: selectedPlace.name + ", Jaipur, Rajasthan, India"
+                        }));
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-12 text-base">
+                      <SelectValue placeholder="Select a place" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60 bg-background z-[9999]">
+                      {places.map((place) => (
+                        <SelectItem key={place.id} value={place.name}>
+                          {place.name} - {place.type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Or type a custom place name below if not in list
+                  </p>
                   <Input
-                    id="placeName"
-                    placeholder="e.g., Hawa Mahal, Amer Fort"
+                    placeholder="Custom place name (optional)"
                     value={formData.placeName}
                     onChange={(e) =>
                       setFormData({ ...formData, placeName: e.target.value })
                     }
                     className="h-12 text-base"
-                    required
                   />
                 </div>
 

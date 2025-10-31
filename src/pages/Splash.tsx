@@ -4,8 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import logo from "@/assets/logo.png";
 import hawaMahal from "@/assets/jaipur-hawa-mahal.jpg";
 import amerFort from "@/assets/jaipur-amer-fort.jpg";
-import cityPalace from "@/assets/jaipur-city-palace.jpg";
-import bazaar from "@/assets/jaipur-bazaar.jpg";
 
 const Splash = () => {
   const navigate = useNavigate();
@@ -19,25 +17,15 @@ const Splash = () => {
     },
     {
       title: "Real-time Safety",
-      description: "Get live safety updates from the community",
+      description: "Get live safety updates and navigate safely",
       image: amerFort
-    },
-    {
-      title: "Voice Navigation",
-      description: "Navigate with bilingual voice guidance",
-      image: cityPalace
-    },
-    {
-      title: "Report & Help",
-      description: "Help others by sharing your safety experiences",
-      image: bazaar
     }
   ];
 
   useEffect(() => {
     const timer = setTimeout(() => {
       navigate("/home");
-    }, 15000);
+    }, 6000); // 3 seconds per slide * 2 slides
 
     return () => clearTimeout(timer);
   }, [navigate]);
@@ -45,7 +33,7 @@ const Splash = () => {
   useEffect(() => {
     const slideTimer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 250);
+    }, 3000); // 3 seconds per slide
 
     return () => clearInterval(slideTimer);
   }, []);
@@ -55,10 +43,10 @@ const Splash = () => {
       <AnimatePresence mode="wait">
         <motion.div
           key={currentSlide}
-          initial={{ scale: 1.1, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          transition={{ duration: 1 }}
+          initial={{ scale: 1.2, opacity: 0, y: 100 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.9, opacity: 0, y: -100 }}
+          transition={{ duration: 1.5, ease: "easeInOut" }}
           className="absolute inset-0"
         >
           <img
@@ -88,10 +76,10 @@ const Splash = () => {
         <AnimatePresence mode="wait">
           <motion.div
             key={currentSlide}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2 }}
+            exit={{ opacity: 0, y: -30 }}
+            transition={{ duration: 0.8 }}
             className="text-center space-y-3"
           >
             <h1 className="text-4xl md:text-5xl font-bold gradient-primary bg-clip-text text-transparent">
