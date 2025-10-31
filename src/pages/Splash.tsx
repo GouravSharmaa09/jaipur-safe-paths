@@ -42,9 +42,12 @@ const Splash = () => {
         muted 
         loop 
         playsInline
-        className="absolute inset-0 w-full h-full object-cover opacity-50"
+        preload="auto"
+        crossOrigin="anonymous"
+        className="absolute inset-0 w-full h-full object-cover opacity-40"
       >
-        <source src="https://videos.pexels.com/video-files/28456071/12409440_1920_1080_30fps.mp4" type="video/mp4" />
+        <source src="https://videos.pexels.com/video-files/28456071/12409440_1280_720_25fps.mp4" type="video/mp4" />
+        <source src="https://videos.pexels.com/video-files/28456071/12409440_640_360_25fps.mp4" type="video/mp4" />
       </video>
       
       {/* Animated Mandala Pattern Overlay */}
