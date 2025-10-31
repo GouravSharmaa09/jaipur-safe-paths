@@ -2,8 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import L from "leaflet";
 import { toast } from "sonner";
 import PlaceCard from "./PlaceCard";
+import NavigationBar from "./NavigationBar";
 import RouteInfoCard from "./RouteInfoCard";
-import { SafetySuggestionDialog } from "./SafetySuggestionDialog";
 import { places, Place } from "@/lib/mapData";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
@@ -62,8 +62,6 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   const [isNavigating, setIsNavigating] = useState(false);
   const [navigationInterval, setNavigationInterval] = useState<NodeJS.Timeout | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [showSafetyDialog, setShowSafetyDialog] = useState(false);
-  const [selectedLocationForAI, setSelectedLocationForAI] = useState<{ name: string; location: string; reports?: number } | null>(null);
   const [locationAddress, setLocationAddress] = useState<string>("");
   const [mapCenter, setMapCenter] = useState<[number, number]>([26.9124, 75.7873]);
   const [mapZoom, setMapZoom] = useState(13);
@@ -224,7 +222,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
         const location = await getUserLocation();
         setMapCenter([location.lat, location.lng]);
         if (mapInstanceRef.current) {
-          mapInstanceRef.current.setView([location.lat, location.lng]);
+          mapInstanceRef.current.setView([location.lat, location.lng], mapInstanceRef.current.getZoom());
         }
       } catch (error) {
         console.error("Navigation update error:", error);
@@ -232,6 +230,21 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
     }, 5000);
 
     setNavigationInterval(interval);
+  };
+
+  const handleCenterOnLocation = async () => {
+    try {
+      const location = await getUserLocation();
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.setView([location.lat, location.lng], mapInstanceRef.current.getZoom(), {
+          animate: true,
+          duration: 0.5
+        });
+      }
+    } catch (error) {
+      console.error("Center location error:", error);
+      toast.error("Could not get your location");
+    }
   };
 
   const handleCloseRoute = () => {
@@ -345,13 +358,6 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
           const address = await reverseGeocode(location.lat, location.lng);
           setLocationAddress(address);
           
-          setSelectedLocationForAI({
-            name: location.name,
-            location: `${location.name}, ${address}`,
-            reports: location.source === "cluster" ? (location as any).report_count : undefined,
-          });
-          setShowSafetyDialog(true);
-          
           // Auto-calculate route to show distance/duration
           calculateRoute({ lat: location.lat, lng: location.lng });
         });
@@ -386,7 +392,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
           style={{ minHeight: isFullScreen ? "100vh" : "500px" }}
         />
 
-        {selectedPlace && !isFullScreen && (
+        {selectedPlace && !isFullScreen && !isNavigating && (
           <PlaceCard
             name={selectedPlace.name}
             type={selectedPlace.type}
@@ -409,13 +415,13 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
         )}
       </motion.div>
 
-      {selectedLocationForAI && (
-        <SafetySuggestionDialog
-          open={showSafetyDialog}
-          onOpenChange={setShowSafetyDialog}
-          placeName={selectedLocationForAI.name}
-          location={selectedLocationForAI.location}
-          userReports={selectedLocationForAI.reports}
+      {isNavigating && routeInfo && !isFullScreen && (
+        <NavigationBar
+          destination={routeInfo.destination}
+          distance={routeInfo.distance}
+          duration={routeInfo.duration}
+          onClose={handleCloseRoute}
+          onCenterLocation={handleCenterOnLocation}
         />
       )}
     </>

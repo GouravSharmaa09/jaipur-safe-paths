@@ -61,10 +61,10 @@ const PlaceCard = ({
 
   return (
     <motion.div
-      initial={{ y: 50, opacity: 0 }}
+      initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      exit={{ y: 50, opacity: 0 }}
-      className="fixed bottom-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:right-auto w-auto md:w-[90%] max-w-md z-[1001]"
+      exit={{ y: 100, opacity: 0 }}
+      className="fixed bottom-0 left-0 right-0 z-[1001] px-4 pb-4"
     >
       <Card className="shadow-soft border-2 bg-background/95 backdrop-blur">
         <CardHeader className="flex flex-row items-start justify-between pb-3">
