@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import logo from "@/assets/logo.png";
-import heroImage from "@/assets/jaipur-hero.jpg";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import hawaMahal from "@/assets/jaipur-hawa-mahal.jpg";
+import amerFort from "@/assets/jaipur-amer-fort.jpg";
+import cityPalace from "@/assets/jaipur-city-palace.jpg";
+import bazaar from "@/assets/jaipur-bazaar.jpg";
 
 const Splash = () => {
   const navigate = useNavigate();
@@ -13,22 +15,26 @@ const Splash = () => {
     {
       title: "Safe-Bazaar",
       subtitle: "Explore Jaipur Safely",
-      description: "Your trusted companion for safe travel in the Pink City"
+      description: "Your trusted companion for safe travel in the Pink City",
+      image: hawaMahal
     },
     {
       title: "Real-time Safety",
       subtitle: "सुरक्षित यात्रा",
-      description: "Get live safety updates from the community"
+      description: "Get live safety updates from the community",
+      image: amerFort
     },
     {
       title: "Voice Navigation",
       subtitle: "आवाज़ नेविगेशन",
-      description: "Navigate with bilingual voice guidance"
+      description: "Navigate with bilingual voice guidance",
+      image: cityPalace
     },
     {
       title: "Report & Help",
       subtitle: "रिपोर्ट करें",
-      description: "Help others by sharing your safety experiences"
+      description: "Help others by sharing your safety experiences",
+      image: bazaar
     }
   ];
 
@@ -50,19 +56,23 @@ const Splash = () => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-background">
-      <motion.div
-        initial={{ scale: 1.2, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 1.5 }}
-        className="absolute inset-0"
-      >
-        <img
-          src={heroImage}
-          alt="Jaipur"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background/90" />
-      </motion.div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentSlide}
+          initial={{ scale: 1.1, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.95, opacity: 0 }}
+          transition={{ duration: 1 }}
+          className="absolute inset-0"
+        >
+          <img
+            src={slides[currentSlide].image}
+            alt="Jaipur"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background/90" />
+        </motion.div>
+      </AnimatePresence>
 
       <div className="relative z-10 flex flex-col items-center gap-6 px-6 max-w-md">
         <motion.img

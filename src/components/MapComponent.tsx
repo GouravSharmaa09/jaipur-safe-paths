@@ -79,7 +79,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
       initMap();
     } else {
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyAe8JOEQhIhMQZ5Y8-0RsrSl8X5mLOLN0E`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyD0Mm3V597PPRlVRJBIfScym_q-Bov7DWs`;
       script.async = true;
       script.onload = initMap;
       document.head.appendChild(script);
