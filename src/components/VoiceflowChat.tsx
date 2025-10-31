@@ -16,6 +16,11 @@ const VoiceflowChat = () => {
           versionID: 'production',
           voice: {
             url: "https://runtime-api.voiceflow.com"
+          },
+          autostart: false,
+          render: {
+            mode: 'embedded',
+            showLauncher: false
           }
         });
       }
@@ -27,20 +32,12 @@ const VoiceflowChat = () => {
       firstScript.parentNode.insertBefore(script, firstScript);
     }
 
-    // Add CSS to hide the default Voiceflow launcher button completely
+    // Hide only the default launcher button, keep chat window functional
     const style = document.createElement('style');
     style.textContent = `
-      #voiceflow-chat,
-      #voiceflow-chat-frame,
       [class*="vfrc-launcher"],
-      [class*="VoiceflowLauncher"],
-      [id*="voiceflow"],
-      div[style*="position: fixed"][style*="bottom"][style*="right"] > *,
-      body > div[style*="z-index"] > div[style*="position: fixed"] {
+      [class*="VoiceflowLauncher"] {
         display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
       }
     `;
     document.head.appendChild(style);
