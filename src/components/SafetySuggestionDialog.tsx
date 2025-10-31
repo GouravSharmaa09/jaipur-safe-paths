@@ -118,7 +118,7 @@ export const SafetySuggestionDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto" aria-describedby="safety-description">
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto z-[9999]" aria-describedby="safety-description">
         <DialogHeader>
           <DialogTitle className="text-2xl">{placeName}</DialogTitle>
         </DialogHeader>

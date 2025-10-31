@@ -7,7 +7,7 @@ import { SafetySuggestionDialog } from "./SafetySuggestionDialog";
 import { places, Place } from "@/lib/mapData";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
-import { Maximize2, Box } from "lucide-react";
+import { Maximize2 } from "lucide-react";
 import { motion } from "framer-motion";
 import "leaflet/dist/leaflet.css";
 
@@ -62,7 +62,6 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   const [isNavigating, setIsNavigating] = useState(false);
   const [navigationInterval, setNavigationInterval] = useState<NodeJS.Timeout | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [is3D, setIs3D] = useState(false);
   const [showSafetyDialog, setShowSafetyDialog] = useState(false);
   const [selectedLocationForAI, setSelectedLocationForAI] = useState<{ name: string; location: string; reports?: number } | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>([26.9124, 75.7873]);
@@ -247,10 +246,6 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
     setIsNavigating(false);
   };
 
-  const toggle3D = () => {
-    toast.info("3D view not available with Leaflet maps");
-  };
-
   const allLocations = [
     ...places.map((p) => ({
       ...p,
@@ -343,14 +338,6 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
             className="shadow-lg"
           >
             <Maximize2 className="h-5 w-5" />
-          </Button>
-          <Button
-            size="icon"
-            variant="secondary"
-            onClick={toggle3D}
-            className={`shadow-lg ${is3D ? "bg-primary text-primary-foreground" : ""}`}
-          >
-            <Box className="h-5 w-5" />
           </Button>
         </div>
 

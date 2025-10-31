@@ -80,10 +80,16 @@ const Report = () => {
 
       const { data: { user } } = await supabase.auth.getUser();
 
+      if (!user) {
+        toast.error("Please sign in to submit a report");
+        setIsSubmitting(false);
+        return;
+      }
+
       const { error } = await supabase
         .from("reports")
         .insert({
-          user_id: user?.id || null,
+          user_id: user.id,
           lat: coordinates.lat,
           lng: coordinates.lng,
           type: formData.safetyLevel,
