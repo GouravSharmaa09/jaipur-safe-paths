@@ -1,4 +1,6 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
 import { toast } from "sonner";
 import PlaceCard from "./PlaceCard";
 import RouteInfoCard from "./RouteInfoCard";
@@ -28,62 +30,54 @@ interface RouteInfo {
   destination: string;
 }
 
+// Fix for default marker icons
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
+
+// Custom marker icons
+const createCustomIcon = (color: string, isCluster: boolean = false) => {
+  return L.divIcon({
+    className: "custom-marker",
+    html: `<div style="
+      background-color: ${color};
+      width: ${isCluster ? "24px" : "20px"};
+      height: ${isCluster ? "24px" : "20px"};
+      border-radius: 50%;
+      border: ${isCluster ? "3px" : "2px"} solid white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    "></div>`,
+    iconSize: [isCluster ? 24 : 20, isCluster ? 24 : 20],
+    iconAnchor: [isCluster ? 12 : 10, isCluster ? 12 : 10],
+  });
+};
+
+// Component to handle map updates
+const MapUpdater = ({ center, zoom }: { center: [number, number]; zoom: number }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, zoom);
+  }, [center, zoom, map]);
+  return null;
+};
+
 const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<any>(null);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [clusters, setClusters] = useState<LocationCluster[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const directionsRenderer = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
   const [isNavigating, setIsNavigating] = useState(false);
   const [navigationInterval, setNavigationInterval] = useState<NodeJS.Timeout | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [is3D, setIs3D] = useState(false);
   const [showSafetyDialog, setShowSafetyDialog] = useState(false);
   const [selectedLocationForAI, setSelectedLocationForAI] = useState<{ name: string; location: string; reports?: number } | null>(null);
-
-  // Initialize map
-  useEffect(() => {
-    if (!mapRef.current || map) return;
-
-    const initMap = () => {
-      const mapInstance = new google.maps.Map(mapRef.current!, {
-        center: { lat: 26.9124, lng: 75.7873 },
-        zoom: 13,
-        mapTypeId: google.maps.MapTypeId.ROADMAP,
-        styles: [
-          {
-            featureType: "all",
-            stylers: [{ saturation: -20 }]
-          }
-        ],
-      });
-
-      directionsRenderer.current = new google.maps.DirectionsRenderer({
-        suppressMarkers: false,
-        polylineOptions: {
-          strokeColor: "#3b82f6",
-          strokeWeight: 5,
-        },
-      });
-      directionsRenderer.current.setMap(mapInstance);
-
-      setMap(mapInstance);
-      setIsLoading(false);
-    };
-
-    if (window.google) {
-      initMap();
-    } else {
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyD0Mm3V597PPRlVRJBIfScym_q-Bov7DWs`;
-      script.async = true;
-      script.onload = initMap;
-      document.head.appendChild(script);
-    }
-  }, [map]);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([26.9124, 75.7873]);
+  const [mapZoom, setMapZoom] = useState(13);
+  const [routeLayer, setRouteLayer] = useState<L.Polyline | null>(null);
+  const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
 
   // Load clusters from Supabase and subscribe
   useEffect(() => {
@@ -127,85 +121,6 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
     };
   }, []);
 
-  // Render markers
-  useEffect(() => {
-    if (!map) return;
-
-    markersRef.current.forEach((marker) => marker.setMap(null));
-    markersRef.current = [];
-
-    const allLocations = [
-      ...places.map((p) => ({
-        ...p,
-        source: "hardcoded" as const,
-      })),
-      ...clusters.map((c) => ({
-        id: c.id,
-        name: `Reported Location (${c.report_count} reports)`,
-        type: "Crowdsourced",
-        lat: c.lat,
-        lng: c.lng,
-        safetyLevel: (c.status === "unverified" ? "caution" : c.status) as "safe" | "caution" | "danger" | "avoid",
-        tip: `This location has ${c.report_count} user reports.`,
-        category: "shop" as const,
-        source: "cluster" as const,
-        report_count: c.report_count,
-      })),
-    ];
-
-    const filteredLocations = allLocations.filter((location) => {
-      if (location.source === "hardcoded") {
-        const matchesCategory = selectedCategory === "all" || location.category === selectedCategory;
-        const matchesSearch =
-          !searchQuery ||
-          location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          location.type.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesCategory && matchesSearch;
-      }
-      return true;
-    });
-
-    filteredLocations.forEach((location, index) => {
-      setTimeout(() => {
-        const markerColor =
-          location.safetyLevel === "safe"
-            ? "#22c55e"
-            : location.safetyLevel === "caution"
-            ? "#a855f7"
-            : "#ef4444";
-
-        const marker = new google.maps.Marker({
-          position: { lat: location.lat, lng: location.lng },
-          map,
-          title: location.name,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: location.source === "cluster" ? 12 : 10,
-            fillColor: markerColor,
-            fillOpacity: 1,
-            strokeColor: "#ffffff",
-            strokeWeight: location.source === "cluster" ? 3 : 2,
-          },
-          animation: google.maps.Animation.DROP,
-        });
-
-        marker.addListener("click", () => {
-          setSelectedPlace(location);
-          setRouteInfo(null);
-
-          setSelectedLocationForAI({
-            name: location.name,
-            location: location.tip,
-            reports: location.source === "cluster" ? (location as any).report_count : undefined,
-          });
-          setShowSafetyDialog(true);
-        });
-
-        markersRef.current.push(marker);
-      }, index * 100);
-    });
-  }, [map, selectedCategory, searchQuery, clusters]);
-
   const getUserLocation = (): Promise<{ lat: number; lng: number }> => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
@@ -226,28 +141,52 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   };
 
   const calculateRoute = async (destination: { lat: number; lng: number }) => {
-    if (!map || !directionsRenderer.current) return;
+    if (!mapInstance) return;
 
     try {
       const origin = await getUserLocation();
-      const directionsService = new google.maps.DirectionsService();
-      const result = await directionsService.route({
-        origin,
-        destination,
-        travelMode: google.maps.TravelMode.DRIVING,
-      });
+      
+      // Using OSRM (Open Source Routing Machine) for routing
+      const response = await fetch(
+        `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`
+      );
+      
+      if (!response.ok) throw new Error("Route calculation failed");
+      
+      const data = await response.json();
+      
+      if (data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        const coordinates = route.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]] as [number, number]);
+        
+        // Remove old route if exists
+        if (routeLayer && mapInstance) {
+          mapInstance.removeLayer(routeLayer);
+        }
+        
+        // Add new route
+        const newRouteLayer = L.polyline(coordinates, {
+          color: "#3b82f6",
+          weight: 5,
+          opacity: 0.7,
+        }).addTo(mapInstance);
+        
+        setRouteLayer(newRouteLayer);
+        
+        // Fit bounds to show entire route
+        mapInstance.fitBounds(newRouteLayer.getBounds(), { padding: [50, 50] });
+        
+        const distanceKm = (route.distance / 1000).toFixed(2);
+        const durationMin = Math.round(route.duration / 60);
+        
+        setRouteInfo({
+          distance: `${distanceKm} km`,
+          duration: `${durationMin} min`,
+          destination: selectedPlace?.name || "Selected location",
+        });
 
-      directionsRenderer.current.setDirections(result);
-
-      const leg = result.routes[0].legs[0];
-
-      setRouteInfo({
-        distance: leg.distance?.text || "Unknown",
-        duration: leg.duration?.text || "Unknown",
-        destination: selectedPlace?.name || "Selected location",
-      });
-
-      toast.success(`Route: ${leg.distance?.text} • ${leg.duration?.text}`);
+        toast.success(`Route: ${distanceKm} km • ${durationMin} min`);
+      }
     } catch (error) {
       console.error("Route error:", error);
       toast.error("Could not calculate route. Enable location access.");
@@ -265,7 +204,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
     const interval = setInterval(async () => {
       try {
         const location = await getUserLocation();
-        map?.setCenter(location);
+        setMapCenter([location.lat, location.lng]);
       } catch (error) {
         console.error("Navigation update error:", error);
       }
@@ -276,9 +215,9 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
 
   const handleCloseRoute = () => {
     setRouteInfo(null);
-    if (directionsRenderer.current) {
-      directionsRenderer.current.setMap(null);
-      directionsRenderer.current.setMap(map);
+    if (routeLayer && mapInstance) {
+      mapInstance.removeLayer(routeLayer);
+      setRouteLayer(null);
     }
     if (navigationInterval) {
       clearInterval(navigationInterval);
@@ -288,20 +227,39 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   };
 
   const toggle3D = () => {
-    if (map) {
-      if (!is3D) {
-        map.setTilt(45);
-        map.setHeading(90);
-        setIs3D(true);
-        toast.success("3D view enabled");
-      } else {
-        map.setTilt(0);
-        map.setHeading(0);
-        setIs3D(false);
-        toast.success("3D view disabled");
-      }
-    }
+    toast.info("3D view not available with Leaflet maps");
   };
+
+  const allLocations = [
+    ...places.map((p) => ({
+      ...p,
+      source: "hardcoded" as const,
+    })),
+    ...clusters.map((c) => ({
+      id: c.id,
+      name: `Reported Location (${c.report_count} reports)`,
+      type: "Crowdsourced",
+      lat: c.lat,
+      lng: c.lng,
+      safetyLevel: (c.status === "unverified" ? "caution" : c.status) as "safe" | "caution" | "danger" | "avoid",
+      tip: `This location has ${c.report_count} user reports.`,
+      category: "shop" as const,
+      source: "cluster" as const,
+      report_count: c.report_count,
+    })),
+  ];
+
+  const filteredLocations = allLocations.filter((location) => {
+    if (location.source === "hardcoded") {
+      const matchesCategory = selectedCategory === "all" || location.category === selectedCategory;
+      const matchesSearch =
+        !searchQuery ||
+        location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        location.type.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    }
+    return true;
+  });
 
   return (
     <>
@@ -312,7 +270,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
           isFullScreen ? "fixed inset-0 z-50 rounded-none" : ""
         }`}
       >
-        <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+        <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
           <Button
             size="icon"
             variant="secondary"
@@ -331,11 +289,59 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
           </Button>
         </div>
 
-        <div
-          ref={mapRef}
+        <MapContainer
+          center={mapCenter}
+          zoom={mapZoom}
           className="w-full h-full"
-          style={{ minHeight: isFullScreen ? "100vh" : "500px" }}
-        />
+          style={{ minHeight: isFullScreen ? "100vh" : "500px", zIndex: 0 }}
+          ref={setMapInstance}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <MapUpdater center={mapCenter} zoom={mapZoom} />
+          
+          {filteredLocations.map((location) => {
+            const markerColor =
+              location.safetyLevel === "safe"
+                ? "#22c55e"
+                : location.safetyLevel === "caution"
+                ? "#a855f7"
+                : "#ef4444";
+
+            const icon = createCustomIcon(markerColor, location.source === "cluster");
+
+            return (
+              <Marker
+                key={location.id}
+                position={[location.lat, location.lng]}
+                icon={icon}
+                eventHandlers={{
+                  click: () => {
+                    setSelectedPlace(location);
+                    setRouteInfo(null);
+
+                    setSelectedLocationForAI({
+                      name: location.name,
+                      location: location.tip,
+                      reports: location.source === "cluster" ? (location as any).report_count : undefined,
+                    });
+                    setShowSafetyDialog(true);
+                  },
+                }}
+              >
+                <Popup>
+                  <div className="text-sm">
+                    <strong>{location.name}</strong>
+                    <br />
+                    <span className="text-muted-foreground">{location.type}</span>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MapContainer>
 
         {selectedPlace && !isFullScreen && (
           <PlaceCard

@@ -25,17 +25,28 @@ const Report = () => {
 
   const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number } | null> => {
     try {
+      // Using Nominatim (OpenStreetMap) for geocoding - free alternative
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
           address + ", Jaipur, Rajasthan, India"
-        )}&key=AIzaSyD0Mm3V597PPRlVRJBIfScym_q-Bov7DWs`
+        )}&format=json&limit=1`,
+        {
+          headers: {
+            'User-Agent': 'JaipurSafetyApp/1.0' // Required by Nominatim
+          }
+        }
       );
+      
+      if (!response.ok) {
+        throw new Error("Geocoding service unavailable");
+      }
+      
       const data = await response.json();
       
-      if (data.status === "OK" && data.results[0]) {
-        return {
-          lat: data.results[0].geometry.location.lat,
-          lng: data.results[0].geometry.location.lng,
+      if (data && data.length > 0) {
+        return { 
+          lat: parseFloat(data[0].lat), 
+          lng: parseFloat(data[0].lon) 
         };
       }
       return null;
