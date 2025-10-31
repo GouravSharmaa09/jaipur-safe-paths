@@ -36,7 +36,7 @@ const Splash = () => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-gradient-to-br from-primary/20 via-background to-accent/20">
-      {/* Video Background - Add your video here */}
+      {/* Video Background from Pexels */}
       <video 
         autoPlay 
         muted 
@@ -44,7 +44,7 @@ const Splash = () => {
         playsInline
         className="absolute inset-0 w-full h-full object-cover opacity-50"
       >
-        <source src="/videos/jaipur-background.mp4" type="video/mp4" />
+        <source src="https://videos.pexels.com/video-files/28456071/12409440_1920_1080_30fps.mp4" type="video/mp4" />
       </video>
       
       {/* Animated Mandala Pattern Overlay */}
