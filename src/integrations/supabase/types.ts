@@ -14,16 +14,91 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      location_clusters: {
+        Row: {
+          avoid_count: number
+          caution_count: number
+          cluster_key: string
+          id: string
+          last_updated: string
+          lat: number
+          lng: number
+          report_count: number
+          safe_count: number
+          status: Database["public"]["Enums"]["cluster_status"]
+        }
+        Insert: {
+          avoid_count?: number
+          caution_count?: number
+          cluster_key: string
+          id?: string
+          last_updated?: string
+          lat: number
+          lng: number
+          report_count?: number
+          safe_count?: number
+          status?: Database["public"]["Enums"]["cluster_status"]
+        }
+        Update: {
+          avoid_count?: number
+          caution_count?: number
+          cluster_key?: string
+          id?: string
+          last_updated?: string
+          lat?: number
+          lng?: number
+          report_count?: number
+          safe_count?: number
+          status?: Database["public"]["Enums"]["cluster_status"]
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          lat: number
+          lng: number
+          place_name: string | null
+          type: Database["public"]["Enums"]["safety_type"]
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          lat: number
+          lng: number
+          place_name?: string | null
+          type: Database["public"]["Enums"]["safety_type"]
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          lat?: number
+          lng?: number
+          place_name?: string | null
+          type?: Database["public"]["Enums"]["safety_type"]
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_cluster_key: {
+        Args: { lat_val: number; lng_val: number }
+        Returns: string
+      }
     }
     Enums: {
-      [_ in never]: never
+      cluster_status: "safe" | "caution" | "avoid" | "unverified"
+      safety_type: "safe" | "caution" | "avoid"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +225,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      cluster_status: ["safe", "caution", "avoid", "unverified"],
+      safety_type: ["safe", "caution", "avoid"],
+    },
   },
 } as const
