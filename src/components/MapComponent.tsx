@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import L from "leaflet";
 import PlaceCard from "./PlaceCard";
 import NavigationBar from "./NavigationBar";
+import MapControls from "./MapControls";
 import RouteInfoCard from "./RouteInfoCard";
 import { places, Place, getRouteSafetyLevel } from "@/lib/mapData";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,7 +69,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   const [locationAddress, setLocationAddress] = useState<string>("");
   const [mapCenter, setMapCenter] = useState<[number, number]>([26.9124, 75.7873]);
   const [mapZoom, setMapZoom] = useState(13);
-  const [userHasZoomed, setUserHasZoomed] = useState(false);
+  
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const routeLayerRef = useRef<L.Polyline | null>(null);
@@ -89,9 +90,6 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
     }).addTo(map);
 
     // Track user zoom interactions
-    map.on('zoomstart', () => {
-      setUserHasZoomed(true);
-    });
 
     // Add click handler for map
     map.on('click', async (e) => {
@@ -230,11 +228,6 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
 
         newRouteLayer.addTo(mapInstanceRef.current);
         routeLayerRef.current = newRouteLayer;
-        
-        // Only fit bounds if user hasn't manually zoomed
-        if (!userHasZoomed) {
-          mapInstanceRef.current.fitBounds(newRouteLayer.getBounds(), { padding: [50, 50] });
-        }
         
         const distanceKm = (route.distance / 1000).toFixed(2);
         const durationMin = Math.round(route.duration / 60);
@@ -610,9 +603,20 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
           distance={routeInfo.distance}
           duration={routeInfo.duration}
           onClose={handleCloseRoute}
-          onCenterLocation={handleCenterOnLocation}
         />
       )}
+
+      <MapControls 
+        onNavigate={handleCenterOnLocation}
+        onShowRoute={() => {
+          if (routeInfo) {
+            console.log("Show route clicked");
+          }
+        }}
+        onVoiceCommand={() => {
+          console.log("Voice command clicked");
+        }}
+      />
     </>
   );
 };
