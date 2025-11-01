@@ -1,10 +1,13 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "./ui/button";
+import { MapPin } from "lucide-react";
 
 const VoiceflowChat = () => {
   const conversationHistory = useRef<string[]>([]);
   const { toast } = useToast();
+  const hasShownButton = useRef(false);
 
   const extractLocationAndShowRoute = async () => {
     try {
@@ -80,42 +83,113 @@ const VoiceflowChat = () => {
           }
         }, 100);
 
-        // Listen to Voiceflow events
-        window.voiceflow.chat.on('message', (event: any) => {
-          console.log('Voiceflow message event:', event);
-          if (event.type === 'text') {
-            conversationHistory.current.push(`${event.isUser ? 'User' : 'Bot'}: ${event.payload.message}`);
-          }
-        });
+        // Comprehensive event logging to understand what events are available
+        const logAllEvents = () => {
+          console.log('=== Voiceflow Events Logging Started ===');
+          
+          // Try to attach to any possible event
+          const possibleEvents = ['message', 'close', 'open', 'feedback', 'interact', 'end', 'complete', 'update', 'change'];
+          
+          possibleEvents.forEach(eventName => {
+            try {
+              window.voiceflow.chat.on(eventName, (data: any) => {
+                console.log(`🔔 Voiceflow Event [${eventName}]:`, data);
+                
+                // Store conversation messages
+                if (eventName === 'message' && data) {
+                  const messageText = data.payload?.message || data.text || data.content || '';
+                  const isUser = data.isUser || data.type === 'request';
+                  if (messageText) {
+                    conversationHistory.current.push(`${isUser ? 'User' : 'Bot'}: ${messageText}`);
+                    console.log('Stored message:', messageText);
+                    console.log('Total messages:', conversationHistory.current.length);
+                  }
+                }
+                
+                // Trigger location extraction on certain events
+                if (['close', 'end', 'complete'].includes(eventName) && conversationHistory.current.length > 0) {
+                  console.log('Triggering location extraction from event:', eventName);
+                  extractLocationAndShowRoute();
+                }
+              });
+            } catch (error) {
+              console.log(`Could not attach to event: ${eventName}`, error);
+            }
+          });
+        };
 
-        // Listen for chat close event
-        window.voiceflow.chat.on('close', () => {
-          console.log('Chat closed, extracting location...');
+        logAllEvents();
+
+        // Add a custom button to manually trigger location extraction after chat
+        const addShowRouteButton = () => {
+          if (hasShownButton.current) return;
+          
+          const buttonHtml = `
+            <div id="show-route-btn" style="
+              position: fixed;
+              bottom: 100px;
+              right: 20px;
+              z-index: 9999;
+              display: none;
+            ">
+              <button style="
+                background: #FF389E;
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                border: none;
+                cursor: pointer;
+                font-weight: 600;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+              " onclick="window.triggerRouteExtraction()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                Show Route on Map
+              </button>
+            </div>
+          `;
+          
+          document.body.insertAdjacentHTML('beforeend', buttonHtml);
+          hasShownButton.current = true;
+
+          // Show button when chat opens
+          const originalOpen = window.voiceflow.chat.open;
+          window.voiceflow.chat.open = function() {
+            originalOpen.apply(this, arguments);
+            const btn = document.getElementById('show-route-btn');
+            if (btn) btn.style.display = 'block';
+          };
+
+          // Hide button when chat closes
+          const originalClose = window.voiceflow.chat.close;
+          window.voiceflow.chat.close = function() {
+            originalClose.apply(this, arguments);
+            const btn = document.getElementById('show-route-btn');
+            if (btn) btn.style.display = 'none';
+          };
+        };
+
+        // Global function to trigger route extraction
+        (window as any).triggerRouteExtraction = () => {
+          console.log('Manual route extraction triggered');
+          console.log('Conversation history:', conversationHistory.current);
           if (conversationHistory.current.length > 0) {
             extractLocationAndShowRoute();
+          } else {
+            toast({
+              title: "No Conversation",
+              description: "Please chat with the bot about a location first.",
+              variant: "destructive"
+            });
           }
-        });
+        };
 
-        // Listen for thumbs up feedback
-        window.voiceflow.chat.on('feedback', (feedback: any) => {
-          console.log('Feedback received:', feedback);
-          if (feedback.type === 'positive' || feedback.value === 1) {
-            console.log('Positive feedback (thumbs up), extracting location...');
-            if (conversationHistory.current.length > 0) {
-              extractLocationAndShowRoute();
-            }
-          }
-        });
-
-        // Alternative event listener for interactions
-        window.voiceflow.chat.on('interact', (interaction: any) => {
-          console.log('Interaction event:', interaction);
-          if (interaction.type === 'complete' || interaction.type === 'end') {
-            if (conversationHistory.current.length > 0) {
-              extractLocationAndShowRoute();
-            }
-          }
-        });
+        setTimeout(addShowRouteButton, 1000);
       }
     };
     script.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs";

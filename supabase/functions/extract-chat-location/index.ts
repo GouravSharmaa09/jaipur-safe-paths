@@ -45,6 +45,11 @@ Use these approximate coordinates for common Jaipur locations:
 - Jal Mahal: 26.9539, 75.8461
 - Albert Hall Museum: 26.9065, 75.8147
 - Bapu Bazaar: 26.9197, 75.7917
+- JEC Kukas: 26.9450, 75.6180
+- Jhalana: 26.9030, 75.8450
+- Ajmer Road: 26.8930, 75.7650
+- Sodala: 26.9100, 75.8000
+- Bagru Road: 26.8800, 75.6900
 
 If no specific location is mentioned or the location is not in Jaipur, respond with:
 {
