@@ -10,7 +10,7 @@ const VoiceflowChat = () => {
   const isChatOpen = useRef(false);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const extractLocationAndShowRoute = async () => {
+  const extractLocationAndShowRoute = async (autoNavigate = true) => {
     try {
       const conversation = conversationHistory.current.join('\n');
       console.log('Extracting location from conversation:', conversation);
@@ -39,22 +39,13 @@ const VoiceflowChat = () => {
           description: `Showing route to ${data.locationName}`,
         });
 
-        // Navigate to map page
-        window.location.href = '/map';
-      } else {
-        toast({
-          title: "No Location Found",
-          description: "Please mention a specific place in Jaipur to see the route.",
-          variant: "destructive"
-        });
+        // Navigate to map page only if autoNavigate is true
+        if (autoNavigate && window.location.pathname !== '/map') {
+          window.location.href = '/map';
+        }
       }
     } catch (error) {
       console.error('Error extracting location:', error);
-      toast({
-        title: "Error",
-        description: "Failed to process location from chat.",
-        variant: "destructive"
-      });
     }
   };
 
@@ -112,6 +103,15 @@ const VoiceflowChat = () => {
                           console.log('📝 Captured message:', messageText.substring(0, 50) + '...');
                           conversationHistory.current.push(messageText.trim());
                           console.log('Total messages captured:', conversationHistory.current.length);
+                          
+                          // Check if this looks like an AI response with location info
+                          const hasLocationKeywords = /(hawa mahal|city palace|amer fort|nahargarh|jal mahal|albert hall|bazaar|fort|palace|museum|road|station)/i.test(messageText);
+                          
+                          if (hasLocationKeywords && conversationHistory.current.length > 2) {
+                            console.log('🗺️ Location keyword detected, triggering real-time map update...');
+                            // Extract location in real-time without navigating
+                            extractLocationAndShowRoute(false);
+                          }
                         }
                       }
                     }

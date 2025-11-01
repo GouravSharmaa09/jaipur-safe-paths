@@ -51,7 +51,7 @@ const RouteInfoCard = ({
       exit={{ y: -50, opacity: 0 }}
       className="fixed top-20 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:right-auto w-auto md:w-[90%] max-w-md z-[1001]"
     >
-      <Card className="shadow-lg border bg-card">
+      <Card className="shadow-md border-2 bg-card">
         <CardHeader className="flex flex-row items-start justify-between pb-3">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary/10">

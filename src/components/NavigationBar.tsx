@@ -23,7 +23,7 @@ const NavigationBar = ({
       exit={{ y: 100, opacity: 0 }}
       className="fixed bottom-0 left-0 right-0 z-[1001] px-4 pb-4"
     >
-      <Card className="bg-card border shadow-lg p-4">
+      <Card className="bg-card border-2 shadow-md p-4">
         <div className="flex items-center gap-3">
           <Button
             size="icon"
