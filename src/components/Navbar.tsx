@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { MapPin, FileText, Info, Home, MessageSquare } from "lucide-react";
+import { MapPin, FileText, Info, Home, MessageSquare, Menu } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "./ui/button";
 import { SidebarTrigger } from "./ui/sidebar";

@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from "react";
 import L from "leaflet";
 import PlaceCard from "./PlaceCard";
 import NavigationBar from "./NavigationBar";
-import MapControls from "./MapControls";
 import RouteInfoCard from "./RouteInfoCard";
 import { places, Place, getRouteSafetyLevel } from "@/lib/mapData";
 import { supabase } from "@/integrations/supabase/client";
@@ -605,18 +604,6 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
           onClose={handleCloseRoute}
         />
       )}
-
-      <MapControls 
-        onNavigate={handleCenterOnLocation}
-        onShowRoute={() => {
-          if (routeInfo) {
-            console.log("Show route clicked");
-          }
-        }}
-        onVoiceCommand={() => {
-          console.log("Voice command clicked");
-        }}
-      />
     </>
   );
 };
