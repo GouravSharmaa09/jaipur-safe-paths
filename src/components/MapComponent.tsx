@@ -273,34 +273,45 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
     setIsNavigating(true);
 
     try {
-      // Get initial location and zoom to navigation view
+      // Get initial location and zoom to street-level navigation view
       const location = await getUserLocation();
       if (mapInstanceRef.current) {
-        mapInstanceRef.current.setView([location.lat, location.lng], 16, {
+        mapInstanceRef.current.setView([location.lat, location.lng], 17, {
           animate: true,
           duration: 1
         });
       }
     } catch (error) {
       console.error("Initial navigation position error:", error);
+      toast({
+        title: "Location Error",
+        description: "Unable to get your current location",
+        variant: "destructive"
+      });
+      setIsNavigating(false);
+      return;
     }
 
+    // Update location every 3 seconds during navigation
     const interval = setInterval(async () => {
       try {
         const location = await getUserLocation();
-        setMapCenter([location.lat, location.lng]);
+        
         if (mapInstanceRef.current) {
-          // Keep the user centered but maintain zoom level (don't force zoom changes during navigation)
+          // Get current zoom level from map (respects user's manual zoom)
           const currentZoom = mapInstanceRef.current.getZoom();
+          
+          // Smoothly pan to new location while maintaining zoom
           mapInstanceRef.current.setView([location.lat, location.lng], currentZoom, {
             animate: true,
-            duration: 0.5
+            duration: 1,
+            easeLinearity: 0.5
           });
         }
       } catch (error) {
         console.error("Navigation update error:", error);
       }
-    }, 5000);
+    }, 3000); // Update every 3 seconds for smoother tracking
 
     setNavigationInterval(interval);
   };
@@ -309,13 +320,20 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
     try {
       const location = await getUserLocation();
       if (mapInstanceRef.current) {
-        mapInstanceRef.current.setView([location.lat, location.lng], mapInstanceRef.current.getZoom(), {
+        // Get current zoom or use a reasonable default
+        const currentZoom = mapInstanceRef.current.getZoom() || 15;
+        mapInstanceRef.current.setView([location.lat, location.lng], currentZoom, {
           animate: true,
-          duration: 0.5
+          duration: 1
         });
       }
     } catch (error) {
       console.error("Center location error:", error);
+      toast({
+        title: "Location Error",
+        description: "Unable to get your current location",
+        variant: "destructive"
+      });
     }
   };
 
@@ -393,12 +411,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
     return true;
   });
 
-  // Update map view when center changes
-  useEffect(() => {
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.setView(mapCenter, mapZoom);
-    }
-  }, [mapCenter, mapZoom]);
+  // Update map view when center changes - REMOVED to prevent zoom conflicts during navigation
 
   // Handle selected location from search
   useEffect(() => {
