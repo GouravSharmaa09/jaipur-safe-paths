@@ -228,6 +228,15 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
         newRouteLayer.addTo(mapInstanceRef.current);
         routeLayerRef.current = newRouteLayer;
         
+        // Fit the map to show the entire route with some padding
+        const bounds = newRouteLayer.getBounds();
+        mapInstanceRef.current.fitBounds(bounds, {
+          padding: [50, 50],
+          maxZoom: 15,
+          animate: true,
+          duration: 1
+        });
+        
         const distanceKm = (route.distance / 1000).toFixed(2);
         const durationMin = Math.round(route.duration / 60);
         
@@ -260,15 +269,33 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
     calculateRoute({ lat: place.lat, lng: place.lng });
   };
 
-  const handleStartNavigation = () => {
+  const handleStartNavigation = async () => {
     setIsNavigating(true);
+
+    try {
+      // Get initial location and zoom to navigation view
+      const location = await getUserLocation();
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.setView([location.lat, location.lng], 16, {
+          animate: true,
+          duration: 1
+        });
+      }
+    } catch (error) {
+      console.error("Initial navigation position error:", error);
+    }
 
     const interval = setInterval(async () => {
       try {
         const location = await getUserLocation();
         setMapCenter([location.lat, location.lng]);
         if (mapInstanceRef.current) {
-          mapInstanceRef.current.setView([location.lat, location.lng], mapInstanceRef.current.getZoom());
+          // Keep the user centered but maintain zoom level (don't force zoom changes during navigation)
+          const currentZoom = mapInstanceRef.current.getZoom();
+          mapInstanceRef.current.setView([location.lat, location.lng], currentZoom, {
+            animate: true,
+            duration: 0.5
+          });
         }
       } catch (error) {
         console.error("Navigation update error:", error);
