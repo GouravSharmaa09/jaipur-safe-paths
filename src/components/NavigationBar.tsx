@@ -23,16 +23,8 @@ const NavigationBar = ({
       exit={{ y: 100, opacity: 0 }}
       className="fixed bottom-0 left-0 right-0 z-[1001] px-4 pb-4"
     >
-      <Card className="bg-background/95 backdrop-blur-sm">
-        <div className="flex items-center justify-between gap-4 p-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-2">
-              <span className="text-lg font-bold text-primary">{duration}</span>
-              <span className="text-sm text-muted-foreground">({distance})</span>
-            </div>
-            <p className="text-sm text-foreground truncate">{destination}</p>
-          </div>
-          
+      <Card className="bg-background/95 backdrop-blur-sm p-4">
+        <div className="flex items-center gap-3">
           <Button
             size="icon"
             variant="ghost"
@@ -41,6 +33,15 @@ const NavigationBar = ({
           >
             <X className="h-4 w-4" />
           </Button>
+          
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{destination}</p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{duration}</span>
+              <span>•</span>
+              <span>{distance}</span>
+            </div>
+          </div>
         </div>
       </Card>
     </motion.div>
