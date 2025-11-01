@@ -2,6 +2,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { MapPin, FileText, Info, Home, MessageSquare } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "./ui/button";
+import { SidebarTrigger } from "./ui/sidebar";
 import logo from "@/assets/logo.png";
 
 const Navbar = () => {
@@ -9,7 +10,7 @@ const Navbar = () => {
   const isHomePage = location.pathname === '/home' || location.pathname === '/';
 
   const navItems = [
-    { to: "/", label: "Home", icon: Home },
+    { to: "/home", label: "Home", icon: Home },
     { to: "/map", label: "Map", icon: MapPin },
     { to: "/report", label: "Report", icon: FileText },
     { to: "/about", label: "About", icon: Info },
@@ -18,9 +19,6 @@ const Navbar = () => {
   const handleOpenChat = () => {
     if (window.voiceflow?.chat) {
       window.voiceflow.chat.open();
-      console.log('Opening Voiceflow chat');
-    } else {
-      console.log('Voiceflow not loaded yet');
     }
   };
 
@@ -32,12 +30,15 @@ const Navbar = () => {
       className="sticky top-0 z-50 w-full border-b border-border bg-card/80 backdrop-blur-lg shadow-card"
     >
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
-        <NavLink to="/" className="flex items-center gap-3 group">
-          <img src={logo} alt="Safe-Bazaar" className="h-10 w-10 transition-transform group-hover:scale-110" />
-          <span className="text-xl font-bold text-foreground hidden sm:inline">
-            Safe-Bazaar
-          </span>
-        </NavLink>
+        <div className="flex items-center gap-3">
+          <SidebarTrigger />
+          <NavLink to="/home" className="flex items-center gap-3 group">
+            <img src={logo} alt="Safe-Bazaar" className="h-10 w-10 transition-transform group-hover:scale-110" />
+            <span className="text-xl font-bold text-foreground hidden sm:inline">
+              Safe-Bazaar
+            </span>
+          </NavLink>
+        </div>
 
         <div className="flex items-center gap-2 sm:gap-6">
           {navItems.map((item) => (
