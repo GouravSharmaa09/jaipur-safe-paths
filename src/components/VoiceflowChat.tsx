@@ -8,6 +8,7 @@ const VoiceflowChat = () => {
   const messageObserver = useRef<MutationObserver | null>(null);
   const chatObserver = useRef<MutationObserver | null>(null);
   const isChatOpen = useRef(false);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const extractLocationAndShowRoute = async () => {
     try {
@@ -134,62 +135,37 @@ const VoiceflowChat = () => {
 
         startMessageObserver();
 
-        // Monitor when chat opens/closes using better detection
-        const monitorChatState = () => {
-          console.log('🔍 Monitoring chat open/close state...');
+        // Simple polling to detect chat state changes
+        pollIntervalRef.current = setInterval(() => {
+          const chatContainer = document.querySelector('[class*="vfrc-chat"]') as HTMLElement;
           
-          // Watch for Voiceflow launcher button clicks
-          const watchLauncher = setInterval(() => {
-            const launcher = document.querySelector('[id*="voiceflow"]') as HTMLElement;
-            if (launcher) {
-              console.log('✅ Found Voiceflow launcher');
-              clearInterval(watchLauncher);
+          if (chatContainer) {
+            const isOpen = chatContainer.style.display !== 'none' && 
+                          chatContainer.style.visibility !== 'hidden' &&
+                          window.getComputedStyle(chatContainer).display !== 'none';
+            
+            // Chat closed
+            if (isChatOpen.current && !isOpen) {
+              console.log('🚪 Chat closed detected!');
+              console.log('📚 Conversation messages:', conversationHistory.current.length);
+              console.log('📝 Full conversation:', conversationHistory.current);
               
-              // Create observer for the launcher's parent to detect chat visibility
-              const observer = new MutationObserver(() => {
-                const chatContainer = document.querySelector('[class*="vfrc-chat"]') as HTMLElement;
-                const isNowOpen = chatContainer && 
-                                 chatContainer.style.display !== 'none' && 
-                                 !chatContainer.classList.contains('hidden');
-                
-                // Chat state changed
-                if (isNowOpen !== isChatOpen.current) {
-                  if (isNowOpen) {
-                    console.log('🚪 Chat opened');
-                    isChatOpen.current = true;
-                  } else if (isChatOpen.current) {
-                    console.log('🚪 Chat closed detected!');
-                    console.log('📚 Total messages in conversation:', conversationHistory.current.length);
-                    
-                    // Automatically extract location and show route
-                    if (conversationHistory.current.length > 2) {
-                      console.log('🚀 Auto-triggering route extraction...');
-                      setTimeout(() => {
-                        extractLocationAndShowRoute();
-                      }, 500);
-                    }
-                    
-                    isChatOpen.current = false;
-                  }
-                }
-              });
+              if (conversationHistory.current.length > 2) {
+                console.log('🚀 Triggering route extraction...');
+                extractLocationAndShowRoute();
+              } else {
+                console.log('⚠️ Not enough messages in conversation');
+              }
               
-              // Observe the entire document for changes
-              observer.observe(document.body, {
-                childList: true,
-                subtree: true,
-                attributes: true,
-                attributeFilter: ['style', 'class']
-              });
-              
-              chatObserver.current = observer;
+              isChatOpen.current = false;
             }
-          }, 500);
-          
-          setTimeout(() => clearInterval(watchLauncher), 10000);
-        };
-
-        const cleanup = monitorChatState();
+            // Chat opened
+            else if (!isChatOpen.current && isOpen) {
+              console.log('🚪 Chat opened');
+              isChatOpen.current = true;
+            }
+          }
+        }, 500);
       }
     };
     script.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs";
@@ -220,6 +196,9 @@ const VoiceflowChat = () => {
       }
       if (chatObserver.current) {
         chatObserver.current.disconnect();
+      }
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
       }
     };
   }, []);
