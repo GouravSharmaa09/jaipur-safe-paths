@@ -1,13 +1,11 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "./ui/button";
-import { MapPin } from "lucide-react";
 
 const VoiceflowChat = () => {
   const conversationHistory = useRef<string[]>([]);
   const { toast } = useToast();
-  const hasShownButton = useRef(false);
+  const messageObserver = useRef<MutationObserver | null>(null);
 
   const extractLocationAndShowRoute = async () => {
     try {
@@ -83,113 +81,148 @@ const VoiceflowChat = () => {
           }
         }, 100);
 
-        // Comprehensive event logging to understand what events are available
-        const logAllEvents = () => {
-          console.log('=== Voiceflow Events Logging Started ===');
+        // Monitor chat messages by observing DOM changes
+        const startMessageObserver = () => {
+          console.log('🔍 Starting message observer...');
           
-          // Try to attach to any possible event
-          const possibleEvents = ['message', 'close', 'open', 'feedback', 'interact', 'end', 'complete', 'update', 'change'];
-          
-          possibleEvents.forEach(eventName => {
-            try {
-              window.voiceflow.chat.on(eventName, (data: any) => {
-                console.log(`🔔 Voiceflow Event [${eventName}]:`, data);
-                
-                // Store conversation messages
-                if (eventName === 'message' && data) {
-                  const messageText = data.payload?.message || data.text || data.content || '';
-                  const isUser = data.isUser || data.type === 'request';
-                  if (messageText) {
-                    conversationHistory.current.push(`${isUser ? 'User' : 'Bot'}: ${messageText}`);
-                    console.log('Stored message:', messageText);
-                    console.log('Total messages:', conversationHistory.current.length);
-                  }
-                }
-                
-                // Trigger location extraction on certain events
-                if (['close', 'end', 'complete'].includes(eventName) && conversationHistory.current.length > 0) {
-                  console.log('Triggering location extraction from event:', eventName);
-                  extractLocationAndShowRoute();
-                }
+          // Wait for chat container to be available
+          const checkForChat = setInterval(() => {
+            const chatContainer = document.querySelector('[class*="vfrc"]');
+            
+            if (chatContainer) {
+              console.log('✅ Found Voiceflow chat container');
+              clearInterval(checkForChat);
+              
+              // Create observer to watch for new messages
+              messageObserver.current = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                  mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === 1) {
+                      const element = node as HTMLElement;
+                      
+                      // Look for message text in various possible selectors
+                      const messageText = element.textContent || element.innerText;
+                      
+                      if (messageText && messageText.trim().length > 0) {
+                        // Check if it's likely a message (not just UI text)
+                        if (messageText.length > 5 && !messageText.includes('<!--')) {
+                          console.log('📝 Captured message:', messageText.substring(0, 50) + '...');
+                          conversationHistory.current.push(messageText.trim());
+                          console.log('Total messages captured:', conversationHistory.current.length);
+                        }
+                      }
+                    }
+                  });
+                });
               });
-            } catch (error) {
-              console.log(`Could not attach to event: ${eventName}`, error);
+              
+              messageObserver.current.observe(chatContainer, {
+                childList: true,
+                subtree: true,
+                characterData: true
+              });
+              
+              console.log('👂 Message observer active');
             }
-          });
+          }, 500);
+          
+          // Stop checking after 10 seconds
+          setTimeout(() => clearInterval(checkForChat), 10000);
         };
 
-        logAllEvents();
+        startMessageObserver();
 
-        // Add a custom button to manually trigger location extraction after chat
+        // Add prominent "Show Route" button
         const addShowRouteButton = () => {
-          if (hasShownButton.current) return;
-          
           const buttonHtml = `
             <div id="show-route-btn" style="
               position: fixed;
               bottom: 100px;
               right: 20px;
-              z-index: 9999;
-              display: none;
+              z-index: 99999;
+              display: block;
+              animation: pulse 2s infinite;
             ">
-              <button style="
-                background: #FF389E;
+              <style>
+                @keyframes pulse {
+                  0%, 100% { transform: scale(1); }
+                  50% { transform: scale(1.05); }
+                }
+                #show-route-btn button:hover {
+                  background: #FF1A7D !important;
+                  transform: scale(1.05);
+                }
+              </style>
+              <button id="route-btn" style="
+                background: linear-gradient(135deg, #FF389E 0%, #FF1A7D 100%);
                 color: white;
-                padding: 12px 24px;
-                border-radius: 8px;
+                padding: 14px 28px;
+                border-radius: 12px;
                 border: none;
                 cursor: pointer;
-                font-weight: 600;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                font-weight: 700;
+                font-size: 15px;
+                box-shadow: 0 8px 16px rgba(255, 56, 158, 0.4);
                 display: flex;
                 align-items: center;
-                gap: 8px;
+                gap: 10px;
+                transition: all 0.3s ease;
               " onclick="window.triggerRouteExtraction()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                   <circle cx="12" cy="10" r="3"></circle>
                 </svg>
-                Show Route on Map
+                Show Route 🗺️
               </button>
             </div>
           `;
           
+          // Remove old button if exists
+          const oldBtn = document.getElementById('show-route-btn');
+          if (oldBtn) oldBtn.remove();
+          
           document.body.insertAdjacentHTML('beforeend', buttonHtml);
-          hasShownButton.current = true;
-
-          // Show button when chat opens
-          const originalOpen = window.voiceflow.chat.open;
-          window.voiceflow.chat.open = function() {
-            originalOpen.apply(this, arguments);
-            const btn = document.getElementById('show-route-btn');
-            if (btn) btn.style.display = 'block';
-          };
-
-          // Hide button when chat closes
-          const originalClose = window.voiceflow.chat.close;
-          window.voiceflow.chat.close = function() {
-            originalClose.apply(this, arguments);
-            const btn = document.getElementById('show-route-btn');
-            if (btn) btn.style.display = 'none';
-          };
+          console.log('✅ Show Route button added');
         };
 
         // Global function to trigger route extraction
-        (window as any).triggerRouteExtraction = () => {
-          console.log('Manual route extraction triggered');
-          console.log('Conversation history:', conversationHistory.current);
+        (window as any).triggerRouteExtraction = async () => {
+          console.log('🚀 Manual route extraction triggered');
+          console.log('📚 Conversation history:', conversationHistory.current);
+          
+          const btn = document.getElementById('route-btn') as HTMLButtonElement;
+          if (btn) {
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+            btn.innerHTML = `
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+              </svg>
+              Processing...
+            `;
+          }
+          
           if (conversationHistory.current.length > 0) {
-            extractLocationAndShowRoute();
+            await extractLocationAndShowRoute();
           } else {
-            toast({
-              title: "No Conversation",
-              description: "Please chat with the bot about a location first.",
-              variant: "destructive"
-            });
+            console.warn('⚠️ No conversation history found');
+            alert('Pehle chatbot se location ke baare mein puchiye!');
+          }
+          
+          if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.innerHTML = `
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+              Show Route 🗺️
+            `;
           }
         };
 
-        setTimeout(addShowRouteButton, 1000);
+        setTimeout(addShowRouteButton, 1500);
       }
     };
     script.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs";
@@ -212,6 +245,13 @@ const VoiceflowChat = () => {
       }
     `;
     document.head.appendChild(style);
+
+    // Cleanup observer on unmount
+    return () => {
+      if (messageObserver.current) {
+        messageObserver.current.disconnect();
+      }
+    };
   }, []);
 
   return null;
