@@ -6,6 +6,8 @@ const VoiceflowChat = () => {
   const conversationHistory = useRef<string[]>([]);
   const { toast } = useToast();
   const messageObserver = useRef<MutationObserver | null>(null);
+  const chatObserver = useRef<MutationObserver | null>(null);
+  const isChatOpen = useRef(false);
 
   const extractLocationAndShowRoute = async () => {
     try {
@@ -132,97 +134,47 @@ const VoiceflowChat = () => {
 
         startMessageObserver();
 
-        // Add prominent "Show Route" button
-        const addShowRouteButton = () => {
-          const buttonHtml = `
-            <div id="show-route-btn" style="
-              position: fixed;
-              bottom: 100px;
-              right: 20px;
-              z-index: 99999;
-              display: block;
-              animation: pulse 2s infinite;
-            ">
-              <style>
-                @keyframes pulse {
-                  0%, 100% { transform: scale(1); }
-                  50% { transform: scale(1.05); }
-                }
-                #show-route-btn button:hover {
-                  background: #FF1A7D !important;
-                  transform: scale(1.05);
-                }
-              </style>
-              <button id="route-btn" style="
-                background: linear-gradient(135deg, #FF389E 0%, #FF1A7D 100%);
-                color: white;
-                padding: 14px 28px;
-                border-radius: 12px;
-                border: none;
-                cursor: pointer;
-                font-weight: 700;
-                font-size: 15px;
-                box-shadow: 0 8px 16px rgba(255, 56, 158, 0.4);
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                transition: all 0.3s ease;
-              " onclick="window.triggerRouteExtraction()">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                  <circle cx="12" cy="10" r="3"></circle>
-                </svg>
-                Show Route 🗺️
-              </button>
-            </div>
-          `;
+        // Monitor when chat opens/closes
+        const monitorChatState = () => {
+          console.log('🔍 Monitoring chat open/close state...');
           
-          // Remove old button if exists
-          const oldBtn = document.getElementById('show-route-btn');
-          if (oldBtn) oldBtn.remove();
+          const checkChatState = setInterval(() => {
+            // Check if chat widget is visible
+            const chatWidget = document.querySelector('[class*="vfrc-widget"]') as HTMLElement;
+            const chatFrame = document.querySelector('[class*="vfrc-chat"]') as HTMLElement;
+            
+            if (chatWidget || chatFrame) {
+              const isVisible = chatWidget?.style.display !== 'none' || chatFrame?.style.display !== 'none';
+              const hasVisibleClass = chatWidget?.classList.toString().includes('open') || 
+                                     chatFrame?.classList.toString().includes('open');
+              
+              const chatCurrentlyOpen = isVisible || hasVisibleClass;
+              
+              // Detect when chat closes
+              if (isChatOpen.current && !chatCurrentlyOpen) {
+                console.log('🚪 Chat closed detected!');
+                console.log('📚 Total messages in conversation:', conversationHistory.current.length);
+                
+                // Automatically extract location and show route
+                if (conversationHistory.current.length > 2) {
+                  console.log('🚀 Auto-triggering route extraction...');
+                  setTimeout(() => {
+                    extractLocationAndShowRoute();
+                  }, 500);
+                }
+                
+                isChatOpen.current = false;
+              } else if (!isChatOpen.current && chatCurrentlyOpen) {
+                console.log('🚪 Chat opened');
+                isChatOpen.current = true;
+              }
+            }
+          }, 1000);
           
-          document.body.insertAdjacentHTML('beforeend', buttonHtml);
-          console.log('✅ Show Route button added');
+          return () => clearInterval(checkChatState);
         };
 
-        // Global function to trigger route extraction
-        (window as any).triggerRouteExtraction = async () => {
-          console.log('🚀 Manual route extraction triggered');
-          console.log('📚 Conversation history:', conversationHistory.current);
-          
-          const btn = document.getElementById('route-btn') as HTMLButtonElement;
-          if (btn) {
-            btn.disabled = true;
-            btn.style.opacity = '0.7';
-            btn.innerHTML = `
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-              </svg>
-              Processing...
-            `;
-          }
-          
-          if (conversationHistory.current.length > 0) {
-            await extractLocationAndShowRoute();
-          } else {
-            console.warn('⚠️ No conversation history found');
-            alert('Pehle chatbot se location ke baare mein puchiye!');
-          }
-          
-          if (btn) {
-            btn.disabled = false;
-            btn.style.opacity = '1';
-            btn.innerHTML = `
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
-              </svg>
-              Show Route 🗺️
-            `;
-          }
-        };
-
-        setTimeout(addShowRouteButton, 1500);
+        const cleanup = monitorChatState();
       }
     };
     script.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs";
@@ -246,10 +198,13 @@ const VoiceflowChat = () => {
     `;
     document.head.appendChild(style);
 
-    // Cleanup observer on unmount
+    // Cleanup observers on unmount
     return () => {
       if (messageObserver.current) {
         messageObserver.current.disconnect();
+      }
+      if (chatObserver.current) {
+        chatObserver.current.disconnect();
       }
     };
   }, []);
