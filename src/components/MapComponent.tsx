@@ -68,6 +68,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
   const [locationAddress, setLocationAddress] = useState<string>("");
   const [mapCenter, setMapCenter] = useState<[number, number]>([26.9124, 75.7873]);
   const [mapZoom, setMapZoom] = useState(13);
+  const [userHasZoomed, setUserHasZoomed] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const routeLayerRef = useRef<L.Polyline | null>(null);
@@ -86,6 +87,11 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
+
+    // Track user zoom interactions
+    map.on('zoomstart', () => {
+      setUserHasZoomed(true);
+    });
 
     // Add click handler for map
     map.on('click', async (e) => {
@@ -225,8 +231,10 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
         newRouteLayer.addTo(mapInstanceRef.current);
         routeLayerRef.current = newRouteLayer;
         
-        // Fit bounds to show entire route
-        mapInstanceRef.current.fitBounds(newRouteLayer.getBounds(), { padding: [50, 50] });
+        // Only fit bounds if user hasn't manually zoomed
+        if (!userHasZoomed) {
+          mapInstanceRef.current.fitBounds(newRouteLayer.getBounds(), { padding: [50, 50] });
+        }
         
         const distanceKm = (route.distance / 1000).toFixed(2);
         const durationMin = Math.round(route.duration / 60);
@@ -550,7 +558,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className={`relative w-full h-full rounded-2xl overflow-hidden shadow-card ${
+        className={`relative w-full h-full rounded-3xl overflow-hidden shadow-elevated ${
           isFullScreen ? "fixed inset-0 z-50 rounded-none" : ""
         }`}
       >
@@ -559,7 +567,7 @@ const MapComponent = ({ selectedCategory, searchQuery }: MapComponentProps) => {
             size="icon"
             variant="secondary"
             onClick={() => setIsFullScreen(!isFullScreen)}
-            className="shadow-lg"
+            className="shadow-glow hover:scale-110 transition-transform duration-300"
           >
             <Maximize2 className="h-5 w-5" />
           </Button>
