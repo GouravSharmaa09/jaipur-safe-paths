@@ -88,7 +88,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      reports_public: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string | null
+          lat: number | null
+          lng: number | null
+          place_name: string | null
+          type: Database["public"]["Enums"]["safety_type"] | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          lat?: number | null
+          lng?: number | null
+          place_name?: string | null
+          type?: Database["public"]["Enums"]["safety_type"] | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          lat?: number | null
+          lng?: number | null
+          place_name?: string | null
+          type?: Database["public"]["Enums"]["safety_type"] | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_cluster_key: {
