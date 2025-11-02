@@ -1,10 +1,18 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schema
+const SafetySuggestionSchema = z.object({
+  placeName: z.string().trim().min(1, 'Place name is required').max(200, 'Place name too long'),
+  location: z.string().trim().min(1, 'Location is required').max(500, 'Location too long'),
+  userReports: z.string().max(2000, 'User reports too long').optional().default('No reports yet')
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -12,7 +20,11 @@ serve(async (req) => {
   }
 
   try {
-    const { placeName, location, userReports } = await req.json();
+    const body = await req.json();
+    
+    // Validate input
+    const validated = SafetySuggestionSchema.parse(body);
+    const { placeName, location, userReports } = validated;
     console.log('Request received:', { placeName, location, userReports });
     
     const GROQ_API_KEY = Deno.env.get('Groq_Api');
@@ -80,6 +92,18 @@ Provide a response in this exact JSON format:
     });
   } catch (error) {
     console.error('Error in get-safety-suggestion:', error);
+    
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      return new Response(JSON.stringify({ 
+        error: 'Invalid input', 
+        details: error.errors 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -1,10 +1,16 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schema
+const LocationExtractionSchema = z.object({
+  conversation: z.string().trim().min(1, 'Conversation is required').max(5000, 'Conversation too long')
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -12,7 +18,11 @@ serve(async (req) => {
   }
 
   try {
-    const { conversation } = await req.json();
+    const body = await req.json();
+    
+    // Validate input
+    const validated = LocationExtractionSchema.parse(body);
+    const { conversation } = validated;
     console.log('Extracting location from conversation');
     
     const GROQ_API_KEY = Deno.env.get('Groq_Api');
@@ -94,6 +104,19 @@ If no specific location is mentioned or the location is not in Jaipur, respond w
     });
   } catch (error) {
     console.error('Error in extract-chat-location:', error);
+    
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      return new Response(JSON.stringify({ 
+        error: 'Invalid input', 
+        details: error.errors,
+        hasLocation: false 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
     return new Response(JSON.stringify({ 
       error: error instanceof Error ? error.message : 'Unknown error',
       hasLocation: false 

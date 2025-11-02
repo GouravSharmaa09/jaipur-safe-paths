@@ -1,11 +1,20 @@
 import { motion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 const SOSButton = () => {
+  const { toast } = useToast();
+
   const handleSOS = () => {
-    // SOS functionality - could trigger emergency services in a real app
-    console.log("SOS Alert triggered");
+    // Open emergency dialer (112 is the emergency number in India)
+    window.location.href = 'tel:112';
+    
+    toast({
+      title: "Opening Emergency Dialer",
+      description: "Calling 112 - India Emergency Services",
+      variant: "destructive"
+    });
   };
 
   return (
